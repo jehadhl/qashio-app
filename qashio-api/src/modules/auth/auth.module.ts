@@ -14,7 +14,9 @@ import { UsersModule } from '@/modules/users/users.module';
     PassportModule,
     JwtModule.registerAsync({
       inject: [jwtConfig.KEY],
-      useFactory: (jwt: ConfigType<typeof jwtConfig>) => ({ secret: jwt.secret }),
+      useFactory: (jwt: ConfigType<typeof jwtConfig>) => ({
+        secret: jwt.secret,
+      }),
     }),
   ],
   controllers: [AuthController],

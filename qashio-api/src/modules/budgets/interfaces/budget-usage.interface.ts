@@ -1,6 +1,6 @@
 export interface PeriodRange {
-  start: Date; 
-  end: Date;   
+  start: Date;
+  end: Date;
 }
 
 export interface BudgetUsage {

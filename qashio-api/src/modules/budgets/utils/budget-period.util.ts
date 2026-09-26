@@ -1,7 +1,10 @@
 import { BudgetPeriod } from '@/modules/budgets/enums/budget-period.enum';
 import { PeriodRange } from '@/modules/budgets/interfaces/budget-usage.interface';
 
-export function getPeriodRange(period: BudgetPeriod, now: Date = new Date()): PeriodRange {
+export function getPeriodRange(
+  period: BudgetPeriod,
+  now: Date = new Date(),
+): PeriodRange {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
   const day = now.getUTCDate();

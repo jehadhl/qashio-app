@@ -20,14 +20,21 @@ describe('UsersController', () => {
   it('GET /users passes the pagination query to the service', async () => {
     const page = { data: [], pagination: {} };
     usersService.findAll.mockResolvedValue(page);
-    const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'DESC' as const };
+    const query = {
+      page: 1,
+      limit: 10,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC' as const,
+    };
 
     await expect(controller.findAll(query)).resolves.toBe(page);
     expect(usersService.findAll).toHaveBeenCalledWith(query);
   });
 
   it('GET /users is admin only', () => {
-    expect(Reflect.getMetadata(ROLES_KEY, UsersController.prototype.findAll)).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, UsersController.prototype.findAll),
+    ).toEqual([UserRole.ADMIN]);
   });
 
   it('GET /users/me returns the signed-in user', async () => {
@@ -39,6 +46,8 @@ describe('UsersController', () => {
   });
 
   it('GET /users/me is open to any signed-in user', () => {
-    expect(Reflect.getMetadata(ROLES_KEY, UsersController.prototype.me)).toBeUndefined();
+    expect(
+      Reflect.getMetadata(ROLES_KEY, UsersController.prototype.me),
+    ).toBeUndefined();
   });
 });

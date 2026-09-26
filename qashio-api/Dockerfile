@@ -1,19 +1,14 @@
-FROM node:22.8.0
+FROM node:22
 
 WORKDIR /app
 
-# Copy package files and install all dependencies (including dev)
+# Install all dependencies (dev ones are needed for ts-node migrations and nest start)
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copy source code
 COPY . .
 
-# Install ts-node-dev globally for hot reload (optional if used in package.json)
-RUN npm install -g ts-node-dev
-
-# Expose port
 EXPOSE 4000
 
-# Start the app in dev mode (with hot reload)
-CMD ["npm", "run", "start:dev"]
+# Create/upgrade the tables, add the demo account (safe to re-run), then start the API
+CMD ["sh", "-c", "npm run migration:run && npm run seed && npm run start:dev"]

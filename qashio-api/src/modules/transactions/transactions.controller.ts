@@ -7,7 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put ,
+  Put,
   Post,
   Query,
 } from '@nestjs/common';
@@ -26,6 +26,8 @@ import { PaginatedResponseDto } from '@/common/dto/paginated-response.dto';
 import { CreateTransactionDto } from '@/modules/transactions/dto/create-transaction.dto';
 import { TransactionQueryDto } from '@/modules/transactions/dto/transaction-query.dto';
 import { TransactionResponseDto } from '@/modules/transactions/dto/transaction-response.dto';
+import { TransactionSummaryQueryDto } from '@/modules/transactions/dto/transaction-summary-query.dto';
+import { TransactionSummaryDto } from '@/modules/transactions/dto/transaction-summary.dto';
 import { UpdateTransactionDto } from '@/modules/transactions/dto/update-transaction.dto';
 import { TransactionsService } from '@/modules/transactions/transactions.service';
 
@@ -54,13 +56,32 @@ export class TransactionsController {
     @CurrentUser('id') userId: string,
     @Query() query: TransactionQueryDto,
   ): Promise<PaginatedResponseDto<TransactionResponseDto>> {
-    const [transactions, total] = await this.transactionsService.findAll(userId, query);
+    const [transactions, total] = await this.transactionsService.findAll(
+      userId,
+      query,
+    );
     return new PaginatedResponseDto(
-      transactions.map((transaction) => TransactionResponseDto.fromEntity(transaction)),
+      transactions.map((transaction) =>
+        TransactionResponseDto.fromEntity(transaction),
+      ),
       query.page,
       query.limit,
       total,
     );
+  }
+
+  // Declared before ':id' so "summary" is not parsed as an id
+  @Get('summary')
+  @ApiOkResponse({
+    type: TransactionSummaryDto,
+    description: 'Completed income/expense totals for a date range',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid date' })
+  getSummary(
+    @CurrentUser('id') userId: string,
+    @Query() query: TransactionSummaryQueryDto,
+  ): Promise<TransactionSummaryDto> {
+    return this.transactionsService.getSummary(userId, query);
   }
 
   @Get(':id')
@@ -74,16 +95,14 @@ export class TransactionsController {
     return TransactionResponseDto.fromEntity(transaction);
   }
 
- 
-
   @Put(':id')
   @ApiOkResponse({ type: TransactionResponseDto })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   @ApiNotFoundResponse({ description: 'Transaction or category not found' })
   async update(
-  @CurrentUser('id') userId: string,
-  @Param('id', ParseUUIDPipe) id: string,
-  @Body() dto: UpdateTransactionDto,
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTransactionDto,
   ): Promise<TransactionResponseDto> {
     const transaction = await this.transactionsService.update(userId, id, dto);
     return TransactionResponseDto.fromEntity(transaction);

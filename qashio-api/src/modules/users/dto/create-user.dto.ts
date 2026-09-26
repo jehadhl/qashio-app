@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsOptional, IsString, Length, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { NormalizeEmail, Trim } from '@/common/decorators/transform.decorators';
 import { UserRole } from '@/modules/users/enums/user-role.enum';
 

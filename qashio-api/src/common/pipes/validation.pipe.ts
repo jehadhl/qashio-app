@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, ValidationError, ValidationPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  ValidationError,
+  ValidationPipe,
+} from '@nestjs/common';
 
 export interface FieldError {
   field: string;
@@ -20,9 +25,9 @@ function flattenErrors(errors: ValidationError[], parent = ''): FieldError[] {
 export class AppValidationPipe extends ValidationPipe {
   constructor() {
     super({
-      whitelist: true,            
-      forbidNonWhitelisted: true, 
-      transform: true,           
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       exceptionFactory: (errors: ValidationError[]) =>
         new BadRequestException({
           message: 'Validation failed',

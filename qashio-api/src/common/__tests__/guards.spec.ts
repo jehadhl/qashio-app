@@ -1,4 +1,8 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '@/common/decorators/public.decorator';
 import { ROLES_KEY } from '@/common/decorators/roles.decorator';
@@ -7,9 +11,14 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { UserRole } from '@/modules/users/enums/user-role.enum';
 
-const contextFor = (metadata: Record<string, unknown>, user?: AuthUser, type = 'http') => {
+const contextFor = (
+  metadata: Record<string, unknown>,
+  user?: AuthUser,
+  type = 'http',
+) => {
   const handler = () => undefined;
-  for (const [key, value] of Object.entries(metadata)) Reflect.defineMetadata(key, value, handler);
+  for (const [key, value] of Object.entries(metadata))
+    Reflect.defineMetadata(key, value, handler);
   return {
     getType: () => type,
     getHandler: () => handler,
@@ -29,19 +38,21 @@ describe('RolesGuard', () => {
   });
 
   it('allows a matching role', () => {
-    expect(guard.canActivate(contextFor({ [ROLES_KEY]: [UserRole.ADMIN] }, admin))).toBe(true);
+    expect(
+      guard.canActivate(contextFor({ [ROLES_KEY]: [UserRole.ADMIN] }, admin)),
+    ).toBe(true);
   });
 
   it('forbids other roles', () => {
-    expect(() => guard.canActivate(contextFor({ [ROLES_KEY]: [UserRole.ADMIN] }, member))).toThrow(
-      ForbiddenException,
-    );
+    expect(() =>
+      guard.canActivate(contextFor({ [ROLES_KEY]: [UserRole.ADMIN] }, member)),
+    ).toThrow(ForbiddenException);
   });
 
   it('rejects a missing user', () => {
-    expect(() => guard.canActivate(contextFor({ [ROLES_KEY]: [UserRole.ADMIN] }))).toThrow(
-      UnauthorizedException,
-    );
+    expect(() =>
+      guard.canActivate(contextFor({ [ROLES_KEY]: [UserRole.ADMIN] })),
+    ).toThrow(UnauthorizedException);
   });
 });
 

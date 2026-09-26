@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { AuthUser } from '@/modules/auth/interfaces/auth-user.interface';
@@ -12,13 +18,15 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const roles = this.reflector.getAllAndOverride<UserRole[] | undefined>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const roles = this.reflector.getAllAndOverride<UserRole[] | undefined>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!roles?.length) return true;
 
-    const user = context.switchToHttp().getRequest<Request & { user?: AuthUser }>().user;
+    const user = context
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthUser }>().user;
     if (!user) throw new UnauthorizedException();
     if (!roles.includes(user.role)) {
       throw new ForbiddenException('You do not have permission to do this');

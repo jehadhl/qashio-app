@@ -5,7 +5,9 @@ export class CreateUsers1790373700339 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-    await queryRunner.query(`CREATE TYPE "public"."user_role" AS ENUM('admin', 'user')`);
+    await queryRunner.query(
+      `CREATE TYPE "public"."user_role" AS ENUM('admin', 'user')`,
+    );
     await queryRunner.query(`
       CREATE TABLE "users" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -20,7 +22,9 @@ export class CreateUsers1790373700339 implements MigrationInterface {
         CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id")
       )
     `);
-    await queryRunner.query(`CREATE UNIQUE INDEX "uq_users_email" ON "users" ("email")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "uq_users_email" ON "users" ("email")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

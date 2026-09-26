@@ -4,7 +4,9 @@ export class CreateBudgets1790412031392 implements MigrationInterface {
   name = 'CreateBudgets1790412031392';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`CREATE TYPE "public"."budget_period" AS ENUM('weekly', 'monthly', 'yearly')`);
+    await queryRunner.query(
+      `CREATE TYPE "public"."budget_period" AS ENUM('weekly', 'monthly', 'yearly')`,
+    );
     // The unique (user_id, category_id, period) also serves lookups by user_id.
     await queryRunner.query(`
       CREATE TABLE "budgets" (
@@ -31,8 +33,12 @@ export class CreateBudgets1790412031392 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "budgets" DROP CONSTRAINT "fk_budgets_category_id"`);
-    await queryRunner.query(`ALTER TABLE "budgets" DROP CONSTRAINT "fk_budgets_user_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "budgets" DROP CONSTRAINT "fk_budgets_category_id"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "budgets" DROP CONSTRAINT "fk_budgets_user_id"`,
+    );
     await queryRunner.query(`DROP TABLE "budgets"`);
     await queryRunner.query(`DROP TYPE "public"."budget_period"`);
   }

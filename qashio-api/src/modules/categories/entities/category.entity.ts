@@ -4,7 +4,6 @@ import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { AbstractEntity } from '@/common/entities/abstract.entity';
 import { User } from '@/modules/users/entities/users.entity';
 
-
 @Entity('categories')
 @Unique('uq_categories_user_name', ['userId', 'name'])
 export class Category extends AbstractEntity {
@@ -17,6 +16,9 @@ export class Category extends AbstractEntity {
   userId!: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'fk_categories_user_id' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'fk_categories_user_id',
+  })
   user!: User;
 }

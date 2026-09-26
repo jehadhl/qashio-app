@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   qashio-api:
     build:
@@ -9,7 +7,7 @@ services:
       - "4000:4000"
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
       kafka:
@@ -44,6 +42,11 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=qashio_points
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d qashio_points"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     ports:
       - "5432:5432"
     volumes:

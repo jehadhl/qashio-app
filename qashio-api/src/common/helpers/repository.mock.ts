@@ -16,6 +16,7 @@ export type QueryBuilderMock = Record<string, jest.Mock> & {
 const CHAIN_METHODS = [
   'select',
   'addSelect',
+  'leftJoin',
   'leftJoinAndSelect',
   'where',
   'andWhere',
@@ -24,22 +25,27 @@ const CHAIN_METHODS = [
   'orderBy',
   'addOrderBy',
   'groupBy',
+  'addGroupBy',
   'skip',
   'take',
 ];
 
-export function createQueryBuilderMock(result: {
-  getOne?: unknown;
-  getManyAndCount?: [unknown[], number];
-  getRawMany?: unknown[];
-} = {}): QueryBuilderMock {
+export function createQueryBuilderMock(
+  result: {
+    getOne?: unknown;
+    getManyAndCount?: [unknown[], number];
+    getRawMany?: unknown[];
+  } = {},
+): QueryBuilderMock {
   const qb = {} as QueryBuilderMock;
   for (const method of CHAIN_METHODS) {
     qb[method] = jest.fn(() => qb);
   }
   qb.getOne = jest.fn().mockResolvedValue(result.getOne ?? null);
-  qb.getManyAndCount = jest.fn().mockResolvedValue(result.getManyAndCount ?? [[], 0]);
+  qb.getManyAndCount = jest
+    .fn()
+    .mockResolvedValue(result.getManyAndCount ?? [[], 0]);
   qb.getRawMany = jest.fn().mockResolvedValue(result.getRawMany ?? []);
-  qb.calls = (method: string) => qb[method].mock.calls;
+  qb.calls = (method: string) => qb[method].mock.calls as unknown[][];
   return qb;
 }

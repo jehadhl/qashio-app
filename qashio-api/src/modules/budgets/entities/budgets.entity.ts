@@ -12,7 +12,12 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 @Unique('uq_budgets_user_category_period', ['userId', 'categoryId', 'period'])
 @Check('chk_budgets_amount_positive', '"amount" > 0')
 export class Budget extends AbstractEntity {
-  @Column({ type: 'numeric', precision: 12, scale: 2, transformer: decimalTransformer })
+  @Column({
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   amount!: number;
 
   @Column({ type: 'enum', enum: BudgetPeriod, enumName: 'budget_period' })
@@ -22,14 +27,20 @@ export class Budget extends AbstractEntity {
   userId!: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'fk_budgets_user_id' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'fk_budgets_user_id',
+  })
   user!: User;
 
   @Column({ name: 'category_id', type: 'uuid' })
   categoryId!: string;
 
   @ManyToOne(() => Category, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'category_id', foreignKeyConstraintName: 'fk_budgets_category_id' })
+  @JoinColumn({
+    name: 'category_id',
+    foreignKeyConstraintName: 'fk_budgets_category_id',
+  })
   category!: Category;
 
   // Business rule lives with the data it belongs to

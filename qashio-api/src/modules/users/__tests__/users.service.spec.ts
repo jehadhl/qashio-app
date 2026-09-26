@@ -10,7 +10,9 @@ describe('UsersService', () => {
   const repo = {
     existsByEmail: jest.fn(),
     create: jest.fn((data: Partial<User>) => Object.assign(new User(), data)),
-    save: jest.fn((user: User) => Promise.resolve(Object.assign(user, { id: 'user-1' }))),
+    save: jest.fn((user: User) =>
+      Promise.resolve(Object.assign(user, { id: 'user-1' })),
+    ),
     findAllPaginated: jest.fn(),
     findById: jest.fn(),
     findByEmailWithPassword: jest.fn(),
@@ -19,7 +21,12 @@ describe('UsersService', () => {
   };
   const service = new UsersService(repo as unknown as UsersRepository);
 
-  const dto = { email: 'demo@qashio.com', password: 'Secret123', firstName: 'Demo', lastName: 'User' };
+  const dto = {
+    email: 'demo@qashio.com',
+    password: 'Secret123',
+    firstName: 'Demo',
+    lastName: 'User',
+  };
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -30,9 +37,16 @@ describe('UsersService', () => {
       const user = await service.create(dto);
 
       expect(repo.existsByEmail).toHaveBeenCalledWith('demo@qashio.com');
-      expect(user).toMatchObject({ id: 'user-1', email: dto.email, firstName: 'Demo', role: UserRole.USER });
+      expect(user).toMatchObject({
+        id: 'user-1',
+        email: dto.email,
+        firstName: 'Demo',
+        role: UserRole.USER,
+      });
       expect(user.passwordHash).not.toBe(dto.password);
-      await expect(verifyPassword(dto.password, user.passwordHash)).resolves.toBe(true);
+      await expect(
+        verifyPassword(dto.password, user.passwordHash),
+      ).resolves.toBe(true);
     });
 
     it('keeps an explicit role (admin-only endpoints)', async () => {
@@ -56,12 +70,23 @@ describe('UsersService', () => {
       const users = [new User(), new User()];
       repo.findAllPaginated.mockResolvedValue([users, 12]);
 
-      const result = await service.findAll({ page: 2, limit: 5, search: 'demo' } as never);
+      const result = await service.findAll({
+        page: 2,
+        limit: 5,
+        search: 'demo',
+      } as never);
 
       expect(repo.findAllPaginated).toHaveBeenCalledWith(2, 5, 'demo');
       expect(result).toBeInstanceOf(PaginatedResponseDto);
       expect(result.data).toBe(users);
-      expect(result.pagination).toMatchObject({ page: 2, limit: 5, total: 12, totalPages: 3, hasNextPage: true, hasPrevPage: true });
+      expect(result.pagination).toMatchObject({
+        page: 2,
+        limit: 5,
+        total: 12,
+        totalPages: 3,
+        hasNextPage: true,
+        hasPrevPage: true,
+      });
     });
   });
 
@@ -76,7 +101,9 @@ describe('UsersService', () => {
     it('throws NotFound for an unknown id', async () => {
       repo.findById.mockResolvedValue(null);
 
-      await expect(service.findById('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -85,7 +112,9 @@ describe('UsersService', () => {
 
     await service.findByEmailWithPassword('  Demo@Qashio.COM ');
 
-    expect(repo.findByEmailWithPassword).toHaveBeenCalledWith('demo@qashio.com');
+    expect(repo.findByEmailWithPassword).toHaveBeenCalledWith(
+      'demo@qashio.com',
+    );
   });
 
   it('findByIdWithRefreshToken delegates to the repository', async () => {
@@ -98,7 +127,15 @@ describe('UsersService', () => {
     await service.setRefreshTokenHash('user-1', 'hash');
     await service.setRefreshTokenHash('user-1', null);
 
-    expect(repo.updateRefreshTokenHash).toHaveBeenNthCalledWith(1, 'user-1', 'hash');
-    expect(repo.updateRefreshTokenHash).toHaveBeenNthCalledWith(2, 'user-1', null);
+    expect(repo.updateRefreshTokenHash).toHaveBeenNthCalledWith(
+      1,
+      'user-1',
+      'hash',
+    );
+    expect(repo.updateRefreshTokenHash).toHaveBeenNthCalledWith(
+      2,
+      'user-1',
+      null,
+    );
   });
 });

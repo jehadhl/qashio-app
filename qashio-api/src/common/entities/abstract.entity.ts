@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CreateDateColumn, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  CreateDateColumn,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export abstract class AbstractEntity {
   @ApiProperty({ format: 'uuid' })

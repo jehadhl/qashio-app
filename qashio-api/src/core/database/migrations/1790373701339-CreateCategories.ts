@@ -22,7 +22,9 @@ export class CreateCategories1790373701339 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "categories" DROP CONSTRAINT "fk_categories_user_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "categories" DROP CONSTRAINT "fk_categories_user_id"`,
+    );
     await queryRunner.query(`DROP TABLE "categories"`);
   }
 }

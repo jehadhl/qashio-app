@@ -7,14 +7,23 @@ import { DataSource, MigrationInterface } from 'typeorm';
 import databaseConfig from '@/core/config/database.config';
 import { buildTypeOrmOptions } from '@/core/database/typeorm.options';
 
-const MIGRATIONS_DIR = join(__dirname, '..', 'src', 'core', 'database', 'migrations');
+const MIGRATIONS_DIR = join(
+  __dirname,
+  '..',
+  'src',
+  'core',
+  'database',
+  'migrations',
+);
 const MIGRATION_FILE = /^\d+-.+\.ts$/;
 
 type MigrationClass = new () => MigrationInterface;
 
 function assertTestName(name: string): void {
   if (!name.endsWith('_test')) {
-    throw new Error(`Refusing to run e2e tests against "${name}": the database name must end with _test`);
+    throw new Error(
+      `Refusing to run e2e tests against "${name}": the database name must end with _test`,
+    );
   }
 }
 
@@ -31,10 +40,18 @@ function loadMigrations(): MigrationClass[] {
     .filter((file) => MIGRATION_FILE.test(file))
     .sort()
     .map((file) => {
-      const exported = Object.values(require(join(MIGRATIONS_DIR, file)) as Record<string, unknown>);
-      const classes = exported.filter((value): value is MigrationClass => typeof value === 'function');
+      const exported = Object.values(
+        // Migrations are discovered at runtime, so they can't be static imports.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require(join(MIGRATIONS_DIR, file)) as Record<string, unknown>,
+      );
+      const classes = exported.filter(
+        (value): value is MigrationClass => typeof value === 'function',
+      );
       if (classes.length !== 1) {
-        throw new Error(`Migration ${file} must export exactly one class, found ${classes.length}`);
+        throw new Error(
+          `Migration ${file} must export exactly one class, found ${classes.length}`,
+        );
       }
       return classes[0];
     });
@@ -48,7 +65,10 @@ async function createDatabaseIfMissing(url: URL): Promise<void> {
   const client = new Client({ connectionString: admin.toString() });
   await client.connect();
   try {
-    const { rowCount } = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
+    const { rowCount } = await client.query(
+      'SELECT 1 FROM pg_database WHERE datname = $1',
+      [name],
+    );
     if (!rowCount) {
       await client.query(`CREATE DATABASE "${name.replace(/"/g, '""')}"`);
     }
@@ -78,9 +98,9 @@ export async function prepareTestDatabase(): Promise<void> {
 // Empties every table except TypeORM's `migrations` bookkeeping, so each run starts clean.
 // Checks the database the connection is actually on, not just the env var.
 export async function truncateAll(dataSource: DataSource): Promise<void> {
-  const [{ current_database: name }] = await dataSource.query<{ current_database: string }[]>(
-    'SELECT current_database()',
-  );
+  const [{ current_database: name }] = await dataSource.query<
+    { current_database: string }[]
+  >('SELECT current_database()');
   assertTestName(name);
 
   const rows = await dataSource.query<{ tablename: string }[]>(
@@ -88,6 +108,8 @@ export async function truncateAll(dataSource: DataSource): Promise<void> {
   );
   if (!rows.length) return;
 
-  const tables = rows.map(({ tablename }) => `"${tablename.replace(/"/g, '""')}"`).join(', ');
+  const tables = rows
+    .map(({ tablename }) => `"${tablename.replace(/"/g, '""')}"`)
+    .join(', ');
   await dataSource.query(`TRUNCATE ${tables} CASCADE`);
 }

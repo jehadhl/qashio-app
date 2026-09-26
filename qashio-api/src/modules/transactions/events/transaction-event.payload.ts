@@ -1,4 +1,7 @@
-import { TransactionStatus, TransactionType } from '@/modules/transactions/enums/transaction.enums';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/modules/transactions/enums/transaction.enums';
 
 export interface TransactionEventPayload {
   transactionId: string;
@@ -7,6 +10,6 @@ export interface TransactionEventPayload {
   amount: number;
   type: TransactionType;
   status: TransactionStatus;
-  date: string;  
-  occurredAt: string; 
+  date: string;
+  occurredAt: string;
 }

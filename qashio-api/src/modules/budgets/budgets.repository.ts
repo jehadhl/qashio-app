@@ -38,11 +38,13 @@ export class BudgetsRepository extends Repository<Budget> {
     });
   }
 
-
-  findAllByUserAndCategory(userId: string, categoryId: string): Promise<Budget[]> {
-  return this.find({
-    where: { userId, categoryId },
-    relations: { category: true },
-  });
-}
+  findAllByUserAndCategory(
+    userId: string,
+    categoryId: string,
+  ): Promise<Budget[]> {
+    return this.find({
+      where: { userId, categoryId },
+      relations: { category: true },
+    });
+  }
 }

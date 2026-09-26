@@ -23,11 +23,11 @@ export async function paginate<T extends ObjectLiteral>(
 }
 
 // Paginates an array that is already in memory.
-export async function paginateArray<T>(
+export function paginateArray<T>(
   items: T[],
   page: number,
   limit: number,
-): Promise<PaginatedResponseDto<T>> {
+): PaginatedResponseDto<T> {
   const total = items.length;
   const skip = (page - 1) * limit;
   const data = items.slice(skip, skip + limit);

@@ -37,7 +37,9 @@ export class BudgetsController {
   @Post()
   @ApiCreatedResponse({ type: BudgetResponseDto })
   @ApiNotFoundResponse({ description: 'Category not found' })
-  @ApiConflictResponse({ description: 'Budget for this category and period already exists' })
+  @ApiConflictResponse({
+    description: 'Budget for this category and period already exists',
+  })
   async create(
     @CurrentUser('id') userId: string,
     @Body() dto: CreateBudgetDto,
@@ -46,8 +48,13 @@ export class BudgetsController {
   }
 
   @Get()
-  @ApiOkResponse({ type: [BudgetResponseDto], description: 'Budgets with current spending' })
-  async findAll(@CurrentUser('id') userId: string): Promise<BudgetResponseDto[]> {
+  @ApiOkResponse({
+    type: [BudgetResponseDto],
+    description: 'Budgets with current spending',
+  })
+  async findAll(
+    @CurrentUser('id') userId: string,
+  ): Promise<BudgetResponseDto[]> {
     const budgets = await this.budgetsService.findAll(userId);
     return budgets.map(toBudgetResponse);
   }
@@ -65,7 +72,9 @@ export class BudgetsController {
   @Put(':id')
   @ApiOkResponse({ type: BudgetResponseDto })
   @ApiNotFoundResponse({ description: 'Budget not found' })
-  @ApiConflictResponse({ description: 'Budget for this category and period already exists' })
+  @ApiConflictResponse({
+    description: 'Budget for this category and period already exists',
+  })
   async update(
     @CurrentUser('id') userId: string,
     @Param('id', ParseUUIDPipe) id: string,

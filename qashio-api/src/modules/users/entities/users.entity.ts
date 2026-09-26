@@ -12,7 +12,12 @@ export class User extends AbstractEntity {
   email!: string;
 
   @Exclude()
-  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
+  @Column({
+    name: 'password_hash',
+    type: 'varchar',
+    length: 255,
+    select: false,
+  })
   passwordHash!: string;
 
   @ApiProperty({ example: 'Jehad' })
@@ -25,10 +30,21 @@ export class User extends AbstractEntity {
 
   // SHA-256 of the current refresh token; null after logout. Never returned.
   @Exclude()
-  @Column({ name: 'refresh_token_hash', type: 'varchar', length: 64, nullable: true, select: false })
+  @Column({
+    name: 'refresh_token_hash',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+    select: false,
+  })
   refreshTokenHash!: string | null;
 
   @ApiProperty({ enum: UserRole, example: UserRole.USER })
-  @Column({ type: 'enum', enum: UserRole, enumName: 'user_role', default: UserRole.USER })
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    enumName: 'user_role',
+    default: UserRole.USER,
+  })
   role!: UserRole;
 }

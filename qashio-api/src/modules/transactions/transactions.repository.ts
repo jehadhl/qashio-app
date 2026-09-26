@@ -1,11 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { Brackets, DataSource, Repository } from 'typeorm';
 import { TransactionQueryDto } from '@/modules/transactions/dto/transaction-query.dto';
+import { TransactionSummaryQueryDto } from '@/modules/transactions/dto/transaction-summary-query.dto';
 import { Transaction } from '@/modules/transactions/entities/transactions.entity';
-import { TransactionStatus, TransactionType } from '@/modules/transactions/enums/transaction.enums';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/modules/transactions/enums/transaction.enums';
 
 // Escape LIKE wildcards so user input "%" or "_" is matched literally
-const escapeLike = (value: string) => value.replace(/[\\%_]/g, (char) => `\\${char}`);
+export interface SummaryRow {
+  categoryId: string;
+  categoryName: string;
+  type: TransactionType;
+  total: string;
+  count: string;
+}
+
+const escapeLike = (value: string) =>
+  value.replace(/[\\%_]/g, (char) => `\\${char}`);
 
 @Injectable()
 export class TransactionsRepository extends Repository<Transaction> {
@@ -20,7 +33,10 @@ export class TransactionsRepository extends Repository<Transaction> {
     });
   }
 
-  findPaginated(userId: string, query: TransactionQueryDto): Promise<[Transaction[], number]> {
+  findPaginated(
+    userId: string,
+    query: TransactionQueryDto,
+  ): Promise<[Transaction[], number]> {
     const qb = this.createQueryBuilder('transaction')
       .leftJoinAndSelect('transaction.category', 'category')
       .where('transaction.userId = :userId', { userId });
@@ -32,15 +48,22 @@ export class TransactionsRepository extends Repository<Transaction> {
       qb.andWhere('transaction.status = :status', { status: query.status });
     }
     if (query.categoryId) {
-      qb.andWhere('transaction.categoryId = :categoryId', { categoryId: query.categoryId });
+      qb.andWhere('transaction.categoryId = :categoryId', {
+        categoryId: query.categoryId,
+      });
     }
     if (query.startDate) {
-      qb.andWhere('transaction.date >= CAST(:startDate AS date)', { startDate: query.startDate });
+      qb.andWhere('transaction.date >= CAST(:startDate AS date)', {
+        startDate: query.startDate,
+      });
     }
     if (query.endDate) {
-      qb.andWhere("transaction.date < CAST(:endDate AS date) + INTERVAL '1 day'", {
-        endDate: query.endDate,
-      });
+      qb.andWhere(
+        "transaction.date < CAST(:endDate AS date) + INTERVAL '1 day'",
+        {
+          endDate: query.endDate,
+        },
+      );
     }
     if (query.search?.trim()) {
       qb.andWhere(
@@ -61,7 +84,45 @@ export class TransactionsRepository extends Repository<Transaction> {
       .getManyAndCount();
   }
 
- 
+  // Completed totals per category and type within the (whole-day, inclusive) date range
+  sumCompletedByCategoryAndType(
+    userId: string,
+    query: TransactionSummaryQueryDto,
+  ): Promise<SummaryRow[]> {
+    const qb = this.createQueryBuilder('transaction')
+      .leftJoin('transaction.category', 'category')
+      .select('category.id', 'categoryId')
+      .addSelect('category.name', 'categoryName')
+      .addSelect('transaction.type', 'type')
+      .addSelect('COALESCE(SUM(transaction.amount), 0)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .where('transaction.userId = :userId', { userId })
+      .andWhere('transaction.status = :status', {
+        status: TransactionStatus.COMPLETED,
+      });
+
+    if (query.startDate) {
+      qb.andWhere('transaction.date >= CAST(:startDate AS date)', {
+        startDate: query.startDate,
+      });
+    }
+    if (query.endDate) {
+      qb.andWhere(
+        "transaction.date < CAST(:endDate AS date) + INTERVAL '1 day'",
+        {
+          endDate: query.endDate,
+        },
+      );
+    }
+
+    return qb
+      .groupBy('category.id')
+      .addGroupBy('category.name')
+      .addGroupBy('transaction.type')
+      .orderBy('category.name', 'ASC')
+      .getRawMany<SummaryRow>();
+  }
+
   async sumCompletedExpensesByCategory(
     userId: string,
     from: Date,
@@ -72,7 +133,9 @@ export class TransactionsRepository extends Repository<Transaction> {
       .addSelect('COALESCE(SUM(transaction.amount), 0)', 'total')
       .where('transaction.userId = :userId', { userId })
       .andWhere('transaction.type = :type', { type: TransactionType.EXPENSE })
-      .andWhere('transaction.status = :status', { status: TransactionStatus.COMPLETED })
+      .andWhere('transaction.status = :status', {
+        status: TransactionStatus.COMPLETED,
+      })
       .andWhere('transaction.date >= :from', { from })
       .andWhere('transaction.date < :to', { to })
       .groupBy('transaction.categoryId')

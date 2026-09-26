@@ -6,7 +6,9 @@ import { UserRole } from '@/modules/users/enums/user-role.enum';
 
 // Override with SEED_DEMO_EMAIL / SEED_DEMO_PASSWORD. Development only.
 const DEMO_USER = {
-  email: (process.env.SEED_DEMO_EMAIL ?? 'demo@qashio.com').trim().toLowerCase(),
+  email: (process.env.SEED_DEMO_EMAIL ?? 'demo@qashio.com')
+    .trim()
+    .toLowerCase(),
   password: process.env.SEED_DEMO_PASSWORD ?? 'Demo@12345',
   firstName: 'Demo',
   lastName: 'User',
@@ -62,7 +64,9 @@ async function seed(): Promise<void> {
         .execute();
 
       const added = result.identifiers.filter(Boolean).length;
-      console.log(`Categories: ${added} added, ${DEMO_CATEGORIES.length - added} already there`);
+      console.log(
+        `Categories: ${added} added, ${DEMO_CATEGORIES.length - added} already there`,
+      );
     });
 
     console.log(`\nLog in with ${DEMO_USER.email} / ${DEMO_USER.password}`);

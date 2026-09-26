@@ -6,13 +6,18 @@ import { createHash, timingSafeEqual } from 'crypto';
 const DEFAULT_SALT_ROUNDS = 12;
 const saltRounds = (): number => {
   const rounds = Number(process.env.BCRYPT_ROUNDS);
-  return Number.isInteger(rounds) && rounds >= 4 && rounds <= 31 ? rounds : DEFAULT_SALT_ROUNDS;
+  return Number.isInteger(rounds) && rounds >= 4 && rounds <= 31
+    ? rounds
+    : DEFAULT_SALT_ROUNDS;
 };
 
-export const hashPassword = (password: string): Promise<string> => hash(password, saltRounds());
+export const hashPassword = (password: string): Promise<string> =>
+  hash(password, saltRounds());
 
-export const verifyPassword = (password: string, passwordHash: string): Promise<boolean> =>
-  compare(password, passwordHash);
+export const verifyPassword = (
+  password: string,
+  passwordHash: string,
+): Promise<boolean> => compare(password, passwordHash);
 
 export const hashToken = (token: string): string =>
   createHash('sha256').update(token).digest('hex');

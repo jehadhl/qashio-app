@@ -22,7 +22,7 @@ import { KAFKA_CLIENT } from '@/core/kafka/kafka.constants';
             producerOnlyMode: true,
             producer: {
               allowAutoTopicCreation: false,
-             createPartitioner: Partitioners.DefaultPartitioner,
+              createPartitioner: Partitioners.DefaultPartitioner,
             },
           },
         }),

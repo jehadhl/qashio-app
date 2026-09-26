@@ -1,7 +1,10 @@
 import { BudgetResponseDto } from '@/modules/budgets/dto/budget-response.dto';
 import { Budget } from '@/modules/budgets/entities/budgets.entity';
 
-import { BudgetUsage, PeriodRange } from '@/modules/budgets/interfaces/budget-usage.interface';
+import {
+  BudgetUsage,
+  PeriodRange,
+} from '@/modules/budgets/interfaces/budget-usage.interface';
 
 export interface BudgetWithUsage {
   budget: Budget;
@@ -9,7 +12,11 @@ export interface BudgetWithUsage {
   usage: BudgetUsage;
 }
 
-export const toBudgetResponse = ({ budget, range, usage }: BudgetWithUsage): BudgetResponseDto => ({
+export const toBudgetResponse = ({
+  budget,
+  range,
+  usage,
+}: BudgetWithUsage): BudgetResponseDto => ({
   id: budget.id,
   amount: budget.amount,
   period: budget.period,

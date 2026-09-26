@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transaction } from '@/modules/transactions/entities/transactions.entity';
-import { TransactionStatus, TransactionType } from '@/modules/transactions/enums/transaction.enums';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/modules/transactions/enums/transaction.enums';
 
 export class TransactionCategoryDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
@@ -16,7 +19,8 @@ export class TransactionResponseDto {
   @ApiPropertyOptional({ nullable: true }) reference!: string | null;
   @ApiProperty() counterparty!: string;
   @ApiPropertyOptional({ nullable: true }) narration!: string | null;
-  @ApiProperty({ type: TransactionCategoryDto }) category!: TransactionCategoryDto;
+  @ApiProperty({ type: TransactionCategoryDto })
+  category!: TransactionCategoryDto;
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
 
@@ -30,7 +34,10 @@ export class TransactionResponseDto {
       reference: transaction.reference,
       counterparty: transaction.counterparty,
       narration: transaction.narration,
-      category: { id: transaction.category.id, name: transaction.category.name },
+      category: {
+        id: transaction.category.id,
+        name: transaction.category.name,
+      },
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
     };

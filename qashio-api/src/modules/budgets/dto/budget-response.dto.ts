@@ -13,7 +13,11 @@ export class BudgetResponseDto {
   @ApiProperty({ type: BudgetCategoryDto }) category!: BudgetCategoryDto;
 
   @ApiProperty({ example: '2026-09-01T00:00:00.000Z' }) periodStart!: Date;
-  @ApiProperty({ example: '2026-10-01T00:00:00.000Z', description: 'Exclusive' }) periodEnd!: Date;
+  @ApiProperty({
+    example: '2026-10-01T00:00:00.000Z',
+    description: 'Exclusive',
+  })
+  periodEnd!: Date;
 
   @ApiProperty({ example: 320.5 }) spent!: number;
   @ApiProperty({ example: 179.5 }) remaining!: number;

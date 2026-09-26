@@ -11,7 +11,10 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Trim } from '@/common/decorators/transform.decorators';
-import { TransactionStatus, TransactionType } from '@/modules/transactions/enums/transaction.enums';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/modules/transactions/enums/transaction.enums';
 
 export class CreateTransactionDto {
   @ApiProperty({ example: 250.5 })
@@ -24,7 +27,10 @@ export class CreateTransactionDto {
   @IsEnum(TransactionType)
   type!: TransactionType;
 
-  @ApiProperty({ enum: TransactionStatus, example: TransactionStatus.COMPLETED })
+  @ApiProperty({
+    enum: TransactionStatus,
+    example: TransactionStatus.COMPLETED,
+  })
   @IsEnum(TransactionStatus)
   status!: TransactionStatus;
 

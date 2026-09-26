@@ -3,15 +3,24 @@ import { ClientKafka } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
 import { KAFKA_TOPICS } from '@/core/kafka/kafka.constants';
 import { Transaction } from '@/modules/transactions/entities/transactions.entity';
-import { TransactionStatus, TransactionType } from '@/modules/transactions/enums/transaction.enums';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/modules/transactions/enums/transaction.enums';
 import { TransactionEventsPublisher } from '@/modules/transactions/events/transaction-events.publisher';
 
 describe('TransactionEventsPublisher', () => {
   const NOW = new Date('2026-09-26T12:00:00.000Z');
 
   const kafka = { emit: jest.fn() };
-  const publisher = new TransactionEventsPublisher(kafka as unknown as ClientKafka);
-  const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+  const sentMessage = () =>
+    kafka.emit.mock.calls[0] as [string, { key: string; value: unknown }];
+  const publisher = new TransactionEventsPublisher(
+    kafka as unknown as ClientKafka,
+  );
+  const loggerError = jest
+    .spyOn(Logger.prototype, 'error')
+    .mockImplementation();
 
   const transaction = {
     id: 'tx-1',
@@ -43,20 +52,23 @@ describe('TransactionEventsPublisher', () => {
       await publisher.publishCreated(transaction);
 
       expect(kafka.emit).toHaveBeenCalledTimes(1);
-      expect(kafka.emit).toHaveBeenCalledWith(KAFKA_TOPICS.TRANSACTION_CREATED, expect.anything());
+      expect(kafka.emit).toHaveBeenCalledWith(
+        KAFKA_TOPICS.TRANSACTION_CREATED,
+        expect.anything(),
+      );
     });
 
     it('uses userId as the message key (keeps one user’s events in order)', async () => {
       await publisher.publishCreated(transaction);
 
-      const [, message] = kafka.emit.mock.calls[0];
+      const [, message] = sentMessage();
       expect(message.key).toBe('user-1');
     });
 
     it('sends exactly the contract fields, with dates as ISO strings', async () => {
       await publisher.publishCreated(transaction);
 
-      const [, message] = kafka.emit.mock.calls[0];
+      const [, message] = sentMessage();
       expect(message.value).toEqual({
         transactionId: 'tx-1',
         userId: 'user-1',
@@ -72,7 +84,7 @@ describe('TransactionEventsPublisher', () => {
     it('does not leak fields outside the contract', async () => {
       await publisher.publishCreated(transaction);
 
-      const [, message] = kafka.emit.mock.calls[0];
+      const [, message] = sentMessage();
       expect(message.value).not.toHaveProperty('counterparty');
       expect(message.value).not.toHaveProperty('narration');
     });
@@ -82,7 +94,10 @@ describe('TransactionEventsPublisher', () => {
     it('sends to the transaction.updated topic', async () => {
       await publisher.publishUpdated(transaction);
 
-      expect(kafka.emit).toHaveBeenCalledWith(KAFKA_TOPICS.TRANSACTION_UPDATED, expect.anything());
+      expect(kafka.emit).toHaveBeenCalledWith(
+        KAFKA_TOPICS.TRANSACTION_UPDATED,
+        expect.anything(),
+      );
     });
   });
 
@@ -90,7 +105,9 @@ describe('TransactionEventsPublisher', () => {
     it('does not throw if the broker rejects the message', async () => {
       kafka.emit.mockReturnValue(throwError(() => new Error('broker down')));
 
-      await expect(publisher.publishCreated(transaction)).resolves.toBeUndefined();
+      await expect(
+        publisher.publishCreated(transaction),
+      ).resolves.toBeUndefined();
     });
 
     it('does not throw if emit fails synchronously', async () => {
@@ -98,7 +115,9 @@ describe('TransactionEventsPublisher', () => {
         throw new Error('client not connected');
       });
 
-      await expect(publisher.publishCreated(transaction)).resolves.toBeUndefined();
+      await expect(
+        publisher.publishCreated(transaction),
+      ).resolves.toBeUndefined();
     });
 
     it('logs the failure with topic and transaction id', async () => {
@@ -107,7 +126,9 @@ describe('TransactionEventsPublisher', () => {
       await publisher.publishCreated(transaction);
 
       expect(loggerError).toHaveBeenCalledWith(
-        expect.stringContaining(`${KAFKA_TOPICS.TRANSACTION_CREATED} publish failed: tx=tx-1`),
+        expect.stringContaining(
+          `${KAFKA_TOPICS.TRANSACTION_CREATED} publish failed: tx=tx-1`,
+        ),
         expect.any(String),
       );
     });

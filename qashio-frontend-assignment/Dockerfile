@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS build
+FROM node:20-alpine AS build
 
 # Set working directory
 WORKDIR /app
@@ -21,7 +21,7 @@ ENV BACKEND_API_URL=$BACKEND_API_URL
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Set working directory
 WORKDIR /app
@@ -30,13 +30,15 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy built files from build stage
 COPY --from=build /app/next.config.js ./
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/package.json ./package.json
+# JSON file behind the demo /api routes (lib/db.ts)
+COPY --from=build /app/data ./data
 
 # Expose the port the app runs on
 EXPOSE 3000

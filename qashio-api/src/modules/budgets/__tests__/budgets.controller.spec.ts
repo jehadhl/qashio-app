@@ -7,7 +7,13 @@ import { BudgetWithUsage } from '@/modules/budgets/mappers/budget.mapper';
 
 describe('BudgetsController', () => {
   let controller: BudgetsController;
-  const budgetsService = { create: jest.fn(), findAll: jest.fn(), findOne: jest.fn(), update: jest.fn(), remove: jest.fn() };
+  const budgetsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
 
   const withUsage: BudgetWithUsage = {
     budget: Object.assign(new Budget(), {
@@ -20,8 +26,16 @@ describe('BudgetsController', () => {
       createdAt: new Date('2026-09-01T00:00:00Z'),
       updatedAt: new Date('2026-09-02T00:00:00Z'),
     }),
-    range: { start: new Date('2026-09-01T00:00:00Z'), end: new Date('2026-10-01T00:00:00Z') },
-    usage: { spent: 320.5, remaining: 179.5, percentage: 64, isExceeded: false },
+    range: {
+      start: new Date('2026-09-01T00:00:00Z'),
+      end: new Date('2026-10-01T00:00:00Z'),
+    },
+    usage: {
+      spent: 320.5,
+      remaining: 179.5,
+      percentage: 64,
+      isExceeded: false,
+    },
   };
 
   // What clients get: budget + category (id, name only) + period window + usage.
@@ -51,7 +65,11 @@ describe('BudgetsController', () => {
 
   it('POST /budgets creates it and returns it with usage', async () => {
     budgetsService.create.mockResolvedValue(withUsage);
-    const dto = { categoryId: 'cat-1', amount: 500, period: BudgetPeriod.MONTHLY };
+    const dto = {
+      categoryId: 'cat-1',
+      amount: 500,
+      period: BudgetPeriod.MONTHLY,
+    };
 
     await expect(controller.create('user-1', dto)).resolves.toEqual(response);
     expect(budgetsService.create).toHaveBeenCalledWith('user-1', dto);
@@ -66,7 +84,9 @@ describe('BudgetsController', () => {
   it('GET /budgets/:id returns one', async () => {
     budgetsService.findOne.mockResolvedValue(withUsage);
 
-    await expect(controller.findOne('user-1', 'budget-1')).resolves.toEqual(response);
+    await expect(controller.findOne('user-1', 'budget-1')).resolves.toEqual(
+      response,
+    );
     expect(budgetsService.findOne).toHaveBeenCalledWith('user-1', 'budget-1');
   });
 
@@ -76,11 +96,17 @@ describe('BudgetsController', () => {
 
     await controller.update('user-1', 'budget-1', dto);
 
-    expect(budgetsService.update).toHaveBeenCalledWith('user-1', 'budget-1', dto);
+    expect(budgetsService.update).toHaveBeenCalledWith(
+      'user-1',
+      'budget-1',
+      dto,
+    );
   });
 
   it('DELETE /budgets/:id removes it and returns nothing', async () => {
-    await expect(controller.remove('user-1', 'budget-1')).resolves.toBeUndefined();
+    await expect(
+      controller.remove('user-1', 'budget-1'),
+    ).resolves.toBeUndefined();
     expect(budgetsService.remove).toHaveBeenCalledWith('user-1', 'budget-1');
   });
 

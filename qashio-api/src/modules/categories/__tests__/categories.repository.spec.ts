@@ -13,11 +13,16 @@ describe('CategoriesRepository', () => {
 
     await repo.findAllByUser('user-1');
 
-    expect(find).toHaveBeenCalledWith({ where: { userId: 'user-1' }, order: { name: 'ASC' } });
+    expect(find).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      order: { name: 'ASC' },
+    });
   });
 
   it('findAllPaginated pages across all users', async () => {
-    const findAndCount = jest.spyOn(repo, 'findAndCount').mockResolvedValue([[], 0]);
+    const findAndCount = jest
+      .spyOn(repo, 'findAndCount')
+      .mockResolvedValue([[], 0]);
 
     await repo.findAllPaginated(2, 25);
 

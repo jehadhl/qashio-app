@@ -18,7 +18,6 @@ import { CategoriesService } from '@/modules/categories/categories.service';
 import { CreateCategoryDto } from '@/modules/categories/dto/create-category.dto';
 import { Category } from '@/modules/categories/entities/category.entity';
 
-
 @ApiTags('Categories')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
@@ -30,7 +29,10 @@ export class CategoriesController {
   @ApiCreatedResponse({ type: Category })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   @ApiConflictResponse({ description: 'Category name already exists' })
-  create(@CurrentUser('id') userId: string, @Body() dto: CreateCategoryDto): Promise<Category> {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateCategoryDto,
+  ): Promise<Category> {
     return this.categoriesService.create(userId, dto);
   }
 
@@ -43,7 +45,7 @@ export class CategoriesController {
 
   @Get('all')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Every user\'s categories, paginated (admin only)' })
+  @ApiOperation({ summary: "Every user's categories, paginated (admin only)" })
   @ApiOkResponse({ description: 'Paginated list of categories' })
   @ApiForbiddenResponse({ description: 'Only admins can list all categories' })
   findAllForAdmin(@Query() query: PaginationDto) {

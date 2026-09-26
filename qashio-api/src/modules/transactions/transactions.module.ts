@@ -10,7 +10,11 @@ import { TransactionsService } from '@/modules/transactions/transactions.service
 @Module({
   imports: [TypeOrmModule.forFeature([Transaction]), CategoriesModule],
   controllers: [TransactionsController],
-  providers: [TransactionsService, TransactionsRepository, TransactionEventsPublisher],
+  providers: [
+    TransactionsService,
+    TransactionsRepository,
+    TransactionEventsPublisher,
+  ],
   exports: [TransactionsService],
 })
 export class TransactionsModule {}

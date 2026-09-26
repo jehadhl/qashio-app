@@ -1,6 +1,9 @@
 import { ILike } from 'typeorm';
 import { UsersRepository } from '@/modules/users/users.repository';
-import { createQueryBuilderMock, stubDataSource } from '@/common/helpers/repository.mock';
+import {
+  createQueryBuilderMock,
+  stubDataSource,
+} from '@/common/helpers/repository.mock';
 
 describe('UsersRepository', () => {
   let repo: UsersRepository;
@@ -26,7 +29,9 @@ describe('UsersRepository', () => {
 
   describe('findAllPaginated', () => {
     it('pages newest first without a search', async () => {
-      const findAndCount = jest.spyOn(repo, 'findAndCount').mockResolvedValue([[], 0]);
+      const findAndCount = jest
+        .spyOn(repo, 'findAndCount')
+        .mockResolvedValue([[], 0]);
 
       await repo.findAllPaginated(3, 20);
 
@@ -39,29 +44,39 @@ describe('UsersRepository', () => {
     });
 
     it('searches email, first name and last name case-insensitively', async () => {
-      const findAndCount = jest.spyOn(repo, 'findAndCount').mockResolvedValue([[], 0]);
+      const findAndCount = jest
+        .spyOn(repo, 'findAndCount')
+        .mockResolvedValue([[], 0]);
 
       await repo.findAllPaginated(1, 10, '  demo ');
 
       const like = ILike('%demo%');
       expect(findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({ where: [{ email: like }, { firstName: like }, { lastName: like }] }),
+        expect.objectContaining({
+          where: [{ email: like }, { firstName: like }, { lastName: like }],
+        }),
       );
     });
 
     it('ignores a whitespace-only search', async () => {
-      const findAndCount = jest.spyOn(repo, 'findAndCount').mockResolvedValue([[], 0]);
+      const findAndCount = jest
+        .spyOn(repo, 'findAndCount')
+        .mockResolvedValue([[], 0]);
 
       await repo.findAllPaginated(1, 10, '   ');
 
-      expect(findAndCount).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+      expect(findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
+      );
     });
   });
 
   it('findByIdWithRefreshToken selects the normally hidden refresh token hash', async () => {
     const user = { id: 'user-1' };
     const qb = createQueryBuilderMock({ getOne: user });
-    const createQueryBuilder = jest.spyOn(repo, 'createQueryBuilder').mockReturnValue(qb as never);
+    const createQueryBuilder = jest
+      .spyOn(repo, 'createQueryBuilder')
+      .mockReturnValue(qb as never);
 
     await expect(repo.findByIdWithRefreshToken('user-1')).resolves.toBe(user);
 
@@ -77,7 +92,9 @@ describe('UsersRepository', () => {
     await repo.findByEmailWithPassword('demo@qashio.com');
 
     expect(qb.addSelect).toHaveBeenCalledWith('user.passwordHash');
-    expect(qb.where).toHaveBeenCalledWith('user.email = :email', { email: 'demo@qashio.com' });
+    expect(qb.where).toHaveBeenCalledWith('user.email = :email', {
+      email: 'demo@qashio.com',
+    });
   });
 
   it('updateRefreshTokenHash updates only that column', async () => {
@@ -85,6 +102,9 @@ describe('UsersRepository', () => {
 
     await repo.updateRefreshTokenHash('user-1', null);
 
-    expect(update).toHaveBeenCalledWith({ id: 'user-1' }, { refreshTokenHash: null });
+    expect(update).toHaveBeenCalledWith(
+      { id: 'user-1' },
+      { refreshTokenHash: null },
+    );
   });
 });

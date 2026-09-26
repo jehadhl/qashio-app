@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaginatedResponseDto } from '@/common/dto/paginated-response.dto';
 import { PaginationDto } from '@/common/dto/pagination.dto';
 import { hashPassword } from '@/common/helpers/hash.helper';
@@ -28,8 +32,16 @@ export class UsersService {
   }
 
   // Admin-only (guarded by @Roles(UserRole.ADMIN) on the route).
-  async findAll({ page, limit, search }: PaginationDto): Promise<PaginatedResponseDto<User>> {
-    const [users, total] = await this.usersRepository.findAllPaginated(page, limit, search);
+  async findAll({
+    page,
+    limit,
+    search,
+  }: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    const [users, total] = await this.usersRepository.findAllPaginated(
+      page,
+      limit,
+      search,
+    );
     return new PaginatedResponseDto(users, page, limit, total);
   }
 
@@ -42,7 +54,9 @@ export class UsersService {
   }
 
   findByEmailWithPassword(email: string): Promise<User | null> {
-    return this.usersRepository.findByEmailWithPassword(email.trim().toLowerCase());
+    return this.usersRepository.findByEmailWithPassword(
+      email.trim().toLowerCase(),
+    );
   }
 
   findByIdWithRefreshToken(id: string): Promise<User | null> {
@@ -50,7 +64,10 @@ export class UsersService {
   }
 
   // null signs the user out everywhere (the stored refresh token no longer matches).
-  setRefreshTokenHash(id: string, refreshTokenHash: string | null): Promise<void> {
+  setRefreshTokenHash(
+    id: string,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
     return this.usersRepository.updateRefreshTokenHash(id, refreshTokenHash);
   }
 }

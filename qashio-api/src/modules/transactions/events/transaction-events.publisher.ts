@@ -22,7 +22,10 @@ export class TransactionEventsPublisher {
     return this.publish(KAFKA_TOPICS.TRANSACTION_UPDATED, transaction);
   }
 
-  private async publish(topic: TransactionTopic, transaction: Transaction): Promise<void> {
+  private async publish(
+    topic: TransactionTopic,
+    transaction: Transaction,
+  ): Promise<void> {
     const payload: TransactionEventPayload = {
       transactionId: transaction.id,
       userId: transaction.userId,
@@ -40,7 +43,10 @@ export class TransactionEventsPublisher {
     try {
       // key = userId → all events of one user go to the same partition, in order
       const records = await lastValueFrom(
-        this.kafka.emit<RecordMetadata[] | undefined>(topic, { key: transaction.userId, value: payload }),
+        this.kafka.emit<RecordMetadata[] | undefined>(topic, {
+          key: transaction.userId,
+          value: payload,
+        }),
       );
       const record = records?.[0];
       this.logger.log(

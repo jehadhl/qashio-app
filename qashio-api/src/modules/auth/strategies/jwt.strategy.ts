@@ -3,9 +3,12 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ACCESS_TOKEN_COOKIE } from '@/modules/auth/auth-cookies';
+import { ACCESS_TOKEN_COOKIE, readCookie } from '@/modules/auth/auth-cookies';
 import { AuthUser } from '@/modules/auth/interfaces/auth-user.interface';
-import { JwtPayload, TokenType } from '@/modules/auth/interfaces/jwt-payload.interface';
+import {
+  JwtPayload,
+  TokenType,
+} from '@/modules/auth/interfaces/jwt-payload.interface';
 import jwtConfig from '@/core/config/jwt.config';
 
 @Injectable()
@@ -14,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       // The httpOnly cookie for the web app; the Bearer header for Swagger and other clients.
       jwtFromRequest: ExtractJwt.fromExtractors([
-        (req: Request) => req?.cookies?.[ACCESS_TOKEN_COOKIE] ?? null,
+        (req: Request) => readCookie(req, ACCESS_TOKEN_COOKIE) ?? null,
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
       ignoreExpiration: false,

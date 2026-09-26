@@ -16,13 +16,18 @@ export class UsersRepository extends Repository<User> {
     return this.findOneBy({ id });
   }
 
-
-  findAllPaginated(page: number, limit: number, search?: string): Promise<[User[], number]> {
+  findAllPaginated(
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<[User[], number]> {
     const term = search?.trim();
     const like = term ? ILike(`%${term}%`) : undefined;
 
     return this.findAndCount({
-      where: like ? [{ email: like }, { firstName: like }, { lastName: like }] : {},
+      where: like
+        ? [{ email: like }, { firstName: like }, { lastName: like }]
+        : {},
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -36,7 +41,10 @@ export class UsersRepository extends Repository<User> {
       .getOne();
   }
 
-  async updateRefreshTokenHash(id: string, refreshTokenHash: string | null): Promise<void> {
+  async updateRefreshTokenHash(
+    id: string,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
     await this.update({ id }, { refreshTokenHash });
   }
 

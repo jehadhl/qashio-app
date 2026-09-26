@@ -4,7 +4,9 @@ export class CreateTransactions1790406939997 implements MigrationInterface {
   name = 'CreateTransactions1790406939997';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`CREATE TYPE "public"."transaction_type" AS ENUM('income', 'expense')`);
+    await queryRunner.query(
+      `CREATE TYPE "public"."transaction_type" AS ENUM('income', 'expense')`,
+    );
     await queryRunner.query(
       `CREATE TYPE "public"."transaction_status" AS ENUM('pending', 'completed', 'failed')`,
     );
@@ -43,10 +45,16 @@ export class CreateTransactions1790406939997 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "transactions" DROP CONSTRAINT "FK_c9e41213ca42d50132ed7ab2b0f"`);
-    await queryRunner.query(`ALTER TABLE "transactions" DROP CONSTRAINT "FK_e9acc6efa76de013e8c1553ed2b"`);
+    await queryRunner.query(
+      `ALTER TABLE "transactions" DROP CONSTRAINT "FK_c9e41213ca42d50132ed7ab2b0f"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" DROP CONSTRAINT "FK_e9acc6efa76de013e8c1553ed2b"`,
+    );
     await queryRunner.query(`DROP INDEX "public"."idx_transactions_user_date"`);
-    await queryRunner.query(`DROP INDEX "public"."idx_transactions_user_category"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."idx_transactions_user_category"`,
+    );
     await queryRunner.query(`DROP TABLE "transactions"`);
     await queryRunner.query(`DROP TYPE "public"."transaction_status"`);
     await queryRunner.query(`DROP TYPE "public"."transaction_type"`);

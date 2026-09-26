@@ -9,8 +9,12 @@ import { TransactionsModule } from '@/modules/transactions/transactions.module';
 import { BudgetEventsConsumer } from '@/modules/budgets/consumers/budget-events.consumer';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Budget]), CategoriesModule, TransactionsModule],
-  controllers: [BudgetsController , BudgetEventsConsumer],
+  imports: [
+    TypeOrmModule.forFeature([Budget]),
+    CategoriesModule,
+    TransactionsModule,
+  ],
+  controllers: [BudgetsController, BudgetEventsConsumer],
   providers: [BudgetsService, BudgetsRepository],
 })
 export class BudgetsModule {}

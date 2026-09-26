@@ -10,12 +10,7 @@ export class PaginatedResponseDto<T> {
   };
   timestamp: string;
 
-  constructor(
-    data: T[],
-    page: number,
-    limit: number,
-    total: number
-  ) {
+  constructor(data: T[], page: number, limit: number, total: number) {
     this.data = data;
     this.pagination = {
       page,

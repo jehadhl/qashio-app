@@ -35,12 +35,16 @@ async function bootstrap() {
   }
 
   // Kafka consumer (e.g. BudgetEventsConsumer) runs in this same process, next to HTTP.
-  const kafka = configService.getOrThrow<ConfigType<typeof kafkaConfig>>('kafka');
+  const kafka =
+    configService.getOrThrow<ConfigType<typeof kafkaConfig>>('kafka');
   await ensureKafkaTopics(kafka.brokers, kafka.clientId);
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
-      client: { clientId: `${kafka.clientId}-consumer`, brokers: kafka.brokers },
+      client: {
+        clientId: `${kafka.clientId}-consumer`,
+        brokers: kafka.brokers,
+      },
       consumer: { groupId: kafka.groupId },
       producer: { createPartitioner: Partitioners.DefaultPartitioner },
     },

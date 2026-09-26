@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable, throwError } from 'rxjs';
 
@@ -18,15 +25,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
 
     const status =
-      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
     let message: string | string[] = 'Internal server error';
     let errors: unknown;
     if (exception instanceof HttpException) {
       const body = exception.getResponse();
-      message = typeof body === 'string' ? body : (body as { message: string | string[] }).message;
+      message =
+        typeof body === 'string'
+          ? body
+          : (body as { message: string | string[] }).message;
       // Per-field details from AppValidationPipe: [{ field, messages }]
-      if (typeof body === 'object' && body && 'errors' in body) errors = (body as { errors: unknown }).errors;
+      if (typeof body === 'object' && body && 'errors' in body)
+        errors = body.errors;
     }
 
     if (status >= 500) {

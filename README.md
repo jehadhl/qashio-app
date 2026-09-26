@@ -166,6 +166,7 @@ Every route requires the access token (the `token` httpOnly cookie, or `Authoriz
 | GET | `/categories/all` | admin only, paginated |
 | POST | `/transactions` | create: emits `transaction.created` |
 | GET | `/transactions` | paginated list, filters below |
+| GET | `/transactions/summary` | completed income, expense and net totals, plus a per-category breakdown. Optional `startDate`, `endDate` (inclusive) |
 | GET | `/transactions/:id` | one transaction |
 | PUT | `/transactions/:id` | full replace: emits `transaction.updated` |
 | DELETE | `/transactions/:id` | 204 |
@@ -250,3 +251,29 @@ cd qashio-api && npm test
 
 **Backend:** guards, auth controller (cookies set, refreshed and cleared), auth service, JWT strategy (cookie or Bearer token), Kafka publisher, transactions service.
 
+
+---
+
+## ✅ Requirements checklist
+
+**Overall: ~93% complete.** All required features are built and all tests pass (API 140, frontend 60). The main gap is the one-command Docker start.
+
+| Area | Status | Score |
+|---|---|---|
+| Transactions CRUD (amount, category, date, type) | ✅ Done | 100% |
+| Categories (create, list, required on transactions) | ✅ Done | 100% |
+| Budgets per category + period, spending vs. budget | ✅ Done | 100% |
+| Kafka events on create/update + budget-check consumer | ✅ Done | 100% |
+| DTO validation, global error filter, Swagger, custom decorators, JWT | ✅ Done | 100% |
+| `/transactions` page: React Query, 10 per page, sort, filters | ✅ Done (MUI Table, not DataGrid) | 95% |
+| Detail drawer, `/transactions/new` form (category, date picker, type) | ✅ Done | 100% |
+| Loading skeletons, MUI error alerts, empty states | ✅ Done | 100% |
+| Backend bonus: JWT, guards/pipes/filters, filtering/sorting/pagination, unit tests | ✅ Done | 100% |
+| Backend bonus: summary/report endpoint (`GET /transactions/summary`) | ✅ Done | 100% |
+| Frontend bonus: Zod, UI tests, Zustand, UX extras, filters | ✅ Done | 100% |
+| `docker-compose up --build` runs everything | ⚠️ Broken | 40% |
+
+### Known gaps
+
+- **Docker API image:** `qashio-api/.dockerignore` excludes `src`, so the API container has no source code.
+- **Migrations:** they don't run on container start; run `migration:run` and `seed` by hand.

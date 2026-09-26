@@ -6,7 +6,9 @@ process.env.NODE_ENV = 'test';
 config({ path: ['.env.test', '.env'], quiet: true });
 
 // E2E_DATABASE_URL, or the dev DATABASE_URL with "_test" appended to the database name.
-const devUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:password@localhost:5432/qashio_points';
+const devUrl =
+  process.env.DATABASE_URL ??
+  'postgresql://postgres:password@localhost:5432/qashio_points';
 const testUrl = new URL(process.env.E2E_DATABASE_URL ?? devUrl);
 if (!process.env.E2E_DATABASE_URL) {
   testUrl.pathname = `${testUrl.pathname.replace(/_test$/, '')}_test`;

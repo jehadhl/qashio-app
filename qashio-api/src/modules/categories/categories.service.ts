@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaginatedResponseDto } from '@/common/dto/paginated-response.dto';
 import { PaginationDto } from '@/common/dto/pagination.dto';
 import { CategoriesRepository } from '@/modules/categories/categories.repository';
@@ -10,12 +14,18 @@ export class CategoriesService {
   constructor(private readonly categoriesRepository: CategoriesRepository) {}
 
   async create(userId: string, dto: CreateCategoryDto): Promise<Category> {
-    const exists = await this.categoriesRepository.existsByName(userId, dto.name);
+    const exists = await this.categoriesRepository.existsByName(
+      userId,
+      dto.name,
+    );
     if (exists) {
       throw new ConflictException(`Category "${dto.name}" already exists`);
     }
 
-    const category = this.categoriesRepository.create({ name: dto.name, userId });
+    const category = this.categoriesRepository.create({
+      name: dto.name,
+      userId,
+    });
     return this.categoriesRepository.save(category);
   }
 
@@ -24,14 +34,21 @@ export class CategoriesService {
   }
 
   // Admin only (guarded by @Roles(UserRole.ADMIN) on the route).
-  async findAllForAdmin({ page, limit }: PaginationDto): Promise<PaginatedResponseDto<Category>> {
-    const [categories, total] = await this.categoriesRepository.findAllPaginated(page, limit);
+  async findAllForAdmin({
+    page,
+    limit,
+  }: PaginationDto): Promise<PaginatedResponseDto<Category>> {
+    const [categories, total] =
+      await this.categoriesRepository.findAllPaginated(page, limit);
     return new PaginatedResponseDto(categories, page, limit, total);
   }
 
   // Used by Transactions & Budgets to verify the category belongs to the user
   async findOneOrFail(userId: string, id: string): Promise<Category> {
-    const category = await this.categoriesRepository.findOneByIdAndUser(id, userId);
+    const category = await this.categoriesRepository.findOneByIdAndUser(
+      id,
+      userId,
+    );
     if (!category) {
       throw new NotFoundException('Category not found');
     }

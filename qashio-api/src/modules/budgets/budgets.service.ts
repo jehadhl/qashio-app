@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CategoriesService } from '@/modules/categories/categories.service';
 import { TransactionsService } from '@/modules/transactions/transactions.service';
 import { BudgetsRepository } from '@/modules/budgets/budgets.repository';
@@ -17,13 +21,22 @@ export class BudgetsService {
     private readonly transactionsService: TransactionsService,
   ) {}
 
-  async checkUsageForCategory(userId: string, categoryId: string): Promise<BudgetWithUsage[]> {
-  const budgets = await this.budgetsRepository.findAllByUserAndCategory(userId, categoryId);
-  return this.withUsage(userId, budgets);
-}
+  async checkUsageForCategory(
+    userId: string,
+    categoryId: string,
+  ): Promise<BudgetWithUsage[]> {
+    const budgets = await this.budgetsRepository.findAllByUserAndCategory(
+      userId,
+      categoryId,
+    );
+    return this.withUsage(userId, budgets);
+  }
 
   async create(userId: string, dto: CreateBudgetDto): Promise<BudgetWithUsage> {
-    const category = await this.categoriesService.findOneOrFail(userId, dto.categoryId);
+    const category = await this.categoriesService.findOneOrFail(
+      userId,
+      dto.categoryId,
+    );
     await this.assertNoDuplicate(userId, category.id, dto.period);
 
     const budget = this.budgetsRepository.create({
@@ -45,15 +58,26 @@ export class BudgetsService {
   }
 
   async findOne(userId: string, id: string): Promise<BudgetWithUsage> {
-    const [result] = await this.withUsage(userId, [await this.findOneOrFail(userId, id)]);
+    const [result] = await this.withUsage(userId, [
+      await this.findOneOrFail(userId, id),
+    ]);
     return result;
   }
 
-  async update(userId: string, id: string, dto: UpdateBudgetDto): Promise<BudgetWithUsage> {
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateBudgetDto,
+  ): Promise<BudgetWithUsage> {
     const budget = await this.findOneOrFail(userId, id);
 
     if (dto.period !== budget.period) {
-      await this.assertNoDuplicate(userId, budget.categoryId, dto.period, budget.id);
+      await this.assertNoDuplicate(
+        userId,
+        budget.categoryId,
+        dto.period,
+        budget.id,
+      );
     }
 
     budget.amount = dto.amount;
@@ -68,7 +92,6 @@ export class BudgetsService {
     const budget = await this.findOneOrFail(userId, id);
     await this.budgetsRepository.remove(budget);
   }
-
 
   private async findOneOrFail(userId: string, id: string): Promise<Budget> {
     const budget = await this.budgetsRepository.findOneByIdAndUser(id, userId);
@@ -91,23 +114,28 @@ export class BudgetsService {
       excludeId,
     );
     if (exists) {
-      throw new ConflictException(`A ${period} budget already exists for this category`);
+      throw new ConflictException(
+        `A ${period} budget already exists for this category`,
+      );
     }
   }
 
-
-  private async withUsage(userId: string, budgets: Budget[]): Promise<BudgetWithUsage[]> {
+  private async withUsage(
+    userId: string,
+    budgets: Budget[],
+  ): Promise<BudgetWithUsage[]> {
     const periods = [...new Set(budgets.map((budget) => budget.period))];
 
     const totalsByPeriod = new Map(
       await Promise.all(
         periods.map(async (period) => {
           const range = getPeriodRange(period);
-          const totals = await this.transactionsService.getCompletedExpensesByCategory(
-            userId,
-            range.start,
-            range.end,
-          );
+          const totals =
+            await this.transactionsService.getCompletedExpensesByCategory(
+              userId,
+              range.start,
+              range.end,
+            );
           return [period, { range, totals }] as const;
         }),
       ),

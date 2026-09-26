@@ -1,4 +1,11 @@
-import { IsIn, IsOptional, IsNumber, IsString, Min, Max } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsNumber,
+  IsString,
+  Min,
+  Max,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class PaginationDto {
@@ -21,7 +28,9 @@ export class PaginationDto {
 
   // Accepts asc/desc in any case (the frontend sends lowercase); stored upper-case for TypeORM.
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.toUpperCase() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toUpperCase() : value,
+  )
   @IsIn(['ASC', 'DESC'])
   sortOrder: 'ASC' | 'DESC' = 'DESC';
 

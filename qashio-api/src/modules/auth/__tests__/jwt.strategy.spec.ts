@@ -4,7 +4,11 @@ import { JwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
 import { UserRole } from '@/modules/users/enums/user-role.enum';
 
 describe('JwtStrategy', () => {
-  const strategy = new JwtStrategy({ secret: 's', accessExpiresIn: '15m', refreshExpiresIn: '7d' });
+  const strategy = new JwtStrategy({
+    secret: 's',
+    accessExpiresIn: '15m',
+    refreshExpiresIn: '7d',
+  });
   const claims = { sub: 'user-1', email: 'a@b.com', role: UserRole.ADMIN };
 
   it('maps an access token to request.user', () => {
@@ -16,6 +20,8 @@ describe('JwtStrategy', () => {
   });
 
   it('rejects a refresh token used as an access token', () => {
-    expect(() => strategy.validate({ ...claims, type: TokenType.REFRESH })).toThrow(UnauthorizedException);
+    expect(() =>
+      strategy.validate({ ...claims, type: TokenType.REFRESH }),
+    ).toThrow(UnauthorizedException);
   });
 });

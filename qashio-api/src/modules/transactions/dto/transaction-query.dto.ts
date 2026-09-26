@@ -1,8 +1,16 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsIn, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { PaginationDto } from '@/common/dto/pagination.dto';
-import { TransactionStatus, TransactionType } from '@/modules/transactions/enums/transaction.enums';
-
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/modules/transactions/enums/transaction.enums';
 
 export const TRANSACTION_SORT_FIELDS = ['date', 'amount'] as const;
 export type TransactionSortField = (typeof TRANSACTION_SORT_FIELDS)[number];
@@ -33,7 +41,10 @@ export class TransactionQueryDto extends PaginationDto {
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({ example: '2026-09-30', description: 'Inclusive (whole day)' })
+  @ApiPropertyOptional({
+    example: '2026-09-30',
+    description: 'Inclusive (whole day)',
+  })
   @IsOptional()
   @IsDateString()
   endDate?: string;

@@ -6,7 +6,11 @@ import { UserRole } from '@/modules/users/enums/user-role.enum';
 
 describe('CategoriesController', () => {
   let controller: CategoriesController;
-  const categoriesService = { create: jest.fn(), findAll: jest.fn(), findAllForAdmin: jest.fn() };
+  const categoriesService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findAllForAdmin: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -21,8 +25,12 @@ describe('CategoriesController', () => {
     const category = { id: 'cat-1', name: 'Rent' };
     categoriesService.create.mockResolvedValue(category);
 
-    await expect(controller.create('user-1', { name: 'Rent' })).resolves.toBe(category);
-    expect(categoriesService.create).toHaveBeenCalledWith('user-1', { name: 'Rent' });
+    await expect(controller.create('user-1', { name: 'Rent' })).resolves.toBe(
+      category,
+    );
+    expect(categoriesService.create).toHaveBeenCalledWith('user-1', {
+      name: 'Rent',
+    });
   });
 
   it("GET /categories lists the signed-in user's categories", async () => {
@@ -34,14 +42,24 @@ describe('CategoriesController', () => {
   });
 
   it('GET /categories/all passes the query through and is admin only', async () => {
-    const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'DESC' as const };
+    const query = {
+      page: 1,
+      limit: 10,
+      sortBy: 'createdAt',
+      sortOrder: 'DESC' as const,
+    };
 
     await controller.findAllForAdmin(query);
 
     expect(categoriesService.findAllForAdmin).toHaveBeenCalledWith(query);
-    expect(Reflect.getMetadata(ROLES_KEY, CategoriesController.prototype.findAllForAdmin)).toEqual([
-      UserRole.ADMIN,
-    ]);
-    expect(Reflect.getMetadata(ROLES_KEY, CategoriesController.prototype.findAll)).toBeUndefined();
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
+        CategoriesController.prototype.findAllForAdmin,
+      ),
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, CategoriesController.prototype.findAll),
+    ).toBeUndefined();
   });
 });
