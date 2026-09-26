@@ -228,16 +228,7 @@ npm run migration:generate  # diff entities against the DB
 3. **Refresh:** when the 15-minute access token expires, the next call gets a 401. The client calls `POST /api/auth/refresh` once, gets a new token pair (refresh tokens are single-use), and retries.
 4. **Log out:** revokes the refresh token in NestJS, clears the cookies and the cached data, then goes to `/login`.
 
----
 
-## 📨 Events (Kafka)
-
-- **Topics:** `transaction.created` and `transaction.updated`, **2 partitions each**. They are created at startup by `ensureKafkaTopics`, which also grows topics that have fewer partitions.
-- **Key:** messages are keyed by `userId`, so one user's events stay in order on one partition while different users spread across partitions.
-- **Publisher:** `TransactionEventsPublisher` sends after the transaction is saved. It logs the partition and offset, or the error. A broker outage never fails the HTTP request.
-- **Consumer:** `BudgetEventsConsumer` runs in the API process. For completed expenses it checks every budget on that category and logs `within limit`, a warning at ≥80%, or `exceeded`. It also logs the partition, offset and lag of each event.
-
----
 
 ## 🧪 Testing
 
