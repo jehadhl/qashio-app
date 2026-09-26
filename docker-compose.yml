@@ -27,13 +27,14 @@ services:
     build:
       context: ./qashio-frontend-assignment
       dockerfile: Dockerfile
+      args:
+        # The browser calls NestJS directly, so this must be the host-published URL
+        # (not the docker service name). It is inlined into the bundle at build time.
+        - BACKEND_API_URL=http://localhost:4000/api
     ports:
       - "3000:3000"
     depends_on:
       - qashio-api
-    environment:
-      # The Next.js /api routes forward to NestJS on port 4000 (service name inside docker).
-      - BACKEND_API_URL=http://qashio-api:4000/api
     networks:
       - default
 

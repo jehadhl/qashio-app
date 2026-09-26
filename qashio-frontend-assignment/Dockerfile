@@ -13,6 +13,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# NestJS URL the browser calls; next.config.js inlines it into the bundle
+ARG BACKEND_API_URL=http://localhost:4000/api
+ENV BACKEND_API_URL=$BACKEND_API_URL
+
 # Build the application
 RUN npm run build
 

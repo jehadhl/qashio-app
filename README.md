@@ -25,15 +25,18 @@ Track income, expenses and budgets. A **NestJS** API (PostgreSQL + TypeORM, Kafk
 ## 🏗 Architecture
 
 ```
-Browser ──► Next.js :3000 ──► NestJS :4000/api ──► PostgreSQL :5432
-            (pages + /api/*)       │
-            BFF: tokens in         ├──► Kafka :9092  transaction.created / transaction.updated
-            httpOnly cookies       │         │
+            ┌──────────────► Next.js :3000   (pages only)
+Browser ────┤
+            └──────────────► NestJS :4000/api ──► PostgreSQL :5432
+             fetch + httpOnly      │
+             auth cookies          ├──► Kafka :9092  transaction.created / transaction.updated
+                                   │         │
                                    └◄────────┘  BudgetEventsConsumer (same process)
 ```
 
-- **The browser only talks to Next.js.** The Next.js `/api/*` route handlers forward to NestJS. The JWTs live in **httpOnly cookies**, and the server turns them into `Authorization: Bearer` headers, so page JavaScript never sees a token.
-- **Mock fallback.** If NestJS isn't configured or can't be reached, the same `/api/*` routes answer from a small mock API (`data/db.json`), so the UI keeps working. Responses carry an `X-Api-Source: nest | mock` header. Login and register always need NestJS.
+- **NestJS owns the API and auth.** The browser calls NestJS directly at `BACKEND_API_URL` with `credentials: 'include'`. Next.js only serves the pages; it does not proxy API calls.
+- **Tokens stay in httpOnly cookies.** NestJS sets the `token` and `refreshToken` cookies on login, register and refresh, and reads the access token from the cookie (a `Bearer` header also works, e.g. for Swagger). Page JavaScript never sees a token.
+- **Demo API in Next.js.** `app/api/transactions` and `app/api/categories` are small route handlers over a local JSON file (`data/data.json` via `lib/db.ts`). They show the assignment's original API; the UI does not use them.
 
 | Service | URL |
 |---|---|
@@ -127,7 +130,7 @@ The seed is safe to run again: it never creates duplicates. It refuses to run wh
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `BACKEND_API_URL` | — | NestJS base URL, e.g. `http://localhost:4000/api` (Docker: `http://qashio-api:4000/api`). Read at request time. |
+| `BACKEND_API_URL` | — (required) | NestJS base URL the browser calls, e.g. `http://localhost:4000/api`. Inlined into the client bundle by `next.config.js`, so restart `npm run dev` (or rebuild) after changing it. It must be reachable from the browser. |
 
 ---
 
@@ -148,14 +151,14 @@ src/
 
 ### Endpoints (all under `/api`)
 
-Every route requires `Authorization: Bearer <accessToken>` unless marked **public**. Successful responses are wrapped as `{ success, data, timestamp }`; paginated ones as `{ success, data, pagination }`.
+Every route requires the access token (the `token` httpOnly cookie, or `Authorization: Bearer <accessToken>`) unless marked **public**. Successful responses are wrapped as `{ success, data, timestamp }`; paginated ones as `{ success, data, pagination }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/auth/register` | public: returns `{ user, tokens }` |
-| POST | `/auth/login` | public |
-| POST | `/auth/refresh` | public: single-use refresh token, returns a new pair |
-| POST | `/auth/logout` | revokes the refresh token |
+| POST | `/auth/register` | public: sets the auth cookies, returns `{ user }` |
+| POST | `/auth/login` | public: sets the auth cookies, returns `{ user }`. Optional `rememberMe` |
+| POST | `/auth/refresh` | public: swaps the single-use `refreshToken` cookie for a new pair (204). Clears the cookies on 401 |
+| POST | `/auth/logout` | public: revokes the refresh token and clears the cookies (204) |
 | GET | `/users/me` | the signed-in user |
 | GET | `/users` | admin only, paginated |
 | POST | `/categories` | create (name unique per user) |
@@ -208,8 +211,8 @@ npm run migration:generate  # diff entities against the DB
 
 ### Highlights
 
-- **Route guard:** `middleware.ts` redirects signed-out users to `/login` and keeps signed-in users away from the login and register pages.
-- **Auth client:** `app/services/apiClient.ts` wraps `fetch`. On a 401 it refreshes the session once and retries the request. Parallel 401s share a single refresh. If the refresh fails, it signs the user out.
+- **Route guard:** `middleware.ts` redirects signed-out users to `/login` and keeps signed-in users away from the login and register pages. It only checks that the `refreshToken` cookie exists; NestJS does the real verification.
+- **Auth client:** `app/services/apiClient.ts` wraps `fetch` and calls NestJS at `BACKEND_API_URL` with the cookies. On a 401 it refreshes the session once and retries the request. Parallel 401s share a single refresh. If the refresh fails, it signs the user out.
 - **Cache:**
   - React Query data is saved to `localStorage`, so a page refresh shows cached data instantly. Data counts as fresh for 30 minutes.
   - Every create, update or delete refetches what it changed.
@@ -221,19 +224,20 @@ npm run migration:generate  # diff entities against the DB
 
 ## 🔐 Authentication flow
 
-1. **Sign in:** `POST /api/auth/login` (Next.js) calls NestJS `/auth/login` and stores `token` + `refreshToken` as **httpOnly, SameSite=Lax** cookies. It returns only the user.
+1. **Sign in:** the browser calls NestJS `POST /api/auth/login`. NestJS sets `token` + `refreshToken` as **httpOnly, SameSite=Lax** cookies and returns only the user.
    - Each cookie expires when its token does.
    - Without "Remember me", both are session cookies that disappear when the browser closes.
-2. **API calls:** the browser sends the cookies to `/api/*`, and Next.js forwards the access token to NestJS as a Bearer header.
-3. **Refresh:** when the 15-minute access token expires, the next call gets a 401. The client calls `POST /api/auth/refresh` once, gets a new token pair (refresh tokens are single-use), and retries.
-4. **Log out:** revokes the refresh token in NestJS, clears the cookies and the cached data, then goes to `/login`.
+   - Cookies are not tied to a port, so the cookies NestJS sets on `localhost` are also visible to the Next.js middleware on `localhost:3000`.
+2. **API calls:** the browser calls NestJS with `credentials: 'include'`, so the cookies go along. NestJS reads the access token from the `token` cookie. CORS allows `CORS_ORIGIN` with credentials.
+3. **Refresh:** when the 15-minute access token expires, the next call gets a 401. The client calls NestJS `POST /api/auth/refresh` once (refresh tokens are single-use), gets new cookies, and retries.
+4. **Log out:** NestJS `POST /api/auth/logout` revokes the refresh token and clears the cookies; the client clears the cached data and goes to `/login`.
 
 
 
 ## 🧪 Testing
 
 ```bash
-cd qashio-frontend-assignment && npm test   # 85 tests
+cd qashio-frontend-assignment && npm test   # 60 tests
 cd qashio-api && npm test
 ```
 
@@ -241,9 +245,8 @@ cd qashio-api && npm test
 
 | Layer | Covers |
 |---|---|
-| Unit | Auth cookie helpers, route-guard middleware, api client (refresh and retry, shared refresh, sign-out on failure) |
-| Server integration | The real `/api/auth/*` handlers and the backend proxy against a fake NestJS HTTP server |
+| Unit | Auth form validators, route-guard middleware, api client (refresh and retry, shared refresh, sign-out on failure) |
 | UI integration | Login, register and logout flows with a real React Query client: loading states, alerts, validation, cache clearing, navigation. Transaction type: column, signed amounts, filter and `?type=` request |
 
-**Backend:** guards, auth service, JWT strategy, Kafka publisher, transactions service.
+**Backend:** guards, auth controller (cookies set, refreshed and cleared), auth service, JWT strategy (cookie or Bearer token), Kafka publisher, transactions service.
 
