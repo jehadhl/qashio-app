@@ -33,7 +33,7 @@ describe('Login page', () => {
     const user = userEvent.setup();
     const router = mockRouter();
     const reply = deferred<MockReply>();
-    const fetchMock = mockFetch({ 'POST /api/auth/login': () => reply.promise });
+    const fetchMock = mockFetch({ 'POST /auth/login': () => reply.promise });
     const { queryClient } = renderWithProviders(<LoginPage />);
 
     await fillAndSubmit(user, 'demo@qashio.com', 'Secret123');
@@ -48,7 +48,7 @@ describe('Login page', () => {
     expect(await screen.findByText('Welcome back, Demo!')).toBeInTheDocument();
     expect(router.replace).toHaveBeenCalledWith('/transactions');
     expect(queryClient.getQueryData(currentUserQueryKey)).toEqual(testUser);
-    expect(callsTo(fetchMock, 'POST', '/api/auth/login')).toEqual([
+    expect(callsTo(fetchMock, 'POST', '/auth/login')).toEqual([
       { email: 'demo@qashio.com', password: 'Secret123', rememberMe: false },
     ]);
   });
@@ -56,30 +56,30 @@ describe('Login page', () => {
   it('sends rememberMe when "Remember me" is ticked', async () => {
     const user = userEvent.setup();
     mockRouter();
-    const fetchMock = mockFetch({ 'POST /api/auth/login': { body: { user: testUser } } });
+    const fetchMock = mockFetch({ 'POST /auth/login': { body: { user: testUser } } });
     renderWithProviders(<LoginPage />);
 
     await user.click(screen.getByLabelText('Remember me'));
     await fillAndSubmit(user, 'demo@qashio.com', 'Secret123');
 
-    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/auth/login')[0]).toMatchObject({ rememberMe: true }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/auth/login')[0]).toMatchObject({ rememberMe: true }));
   });
 
   it('trims the email before sending', async () => {
     const user = userEvent.setup();
     mockRouter();
-    const fetchMock = mockFetch({ 'POST /api/auth/login': { body: { user: testUser } } });
+    const fetchMock = mockFetch({ 'POST /auth/login': { body: { user: testUser } } });
     renderWithProviders(<LoginPage />);
 
     await fillAndSubmit(user, '  demo@qashio.com  ', 'Secret123');
 
-    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/auth/login')[0].email).toBe('demo@qashio.com'));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/auth/login')[0].email).toBe('demo@qashio.com'));
   });
 
   it('drops a previous user\'s cached data on sign-in', async () => {
     const user = userEvent.setup();
     mockRouter();
-    mockFetch({ 'POST /api/auth/login': { body: { user: testUser } } });
+    mockFetch({ 'POST /auth/login': { body: { user: testUser } } });
     localStorage.setItem(CACHE_KEY, '{"someone":"else"}');
     const { queryClient } = renderWithProviders(<LoginPage />);
     queryClient.setQueryData(['transactions', 'previous-user'], [{ id: 'x' }]);
@@ -95,7 +95,7 @@ describe('Login page', () => {
     const user = userEvent.setup();
     const router = mockRouter();
     mockFetch({
-      'POST /api/auth/login': {
+      'POST /auth/login': {
         status: 401,
         body: { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' } },
       },
@@ -115,7 +115,7 @@ describe('Login page', () => {
     const user = userEvent.setup();
     mockRouter();
     mockFetch({
-      'POST /api/auth/login': { status: 502, body: { error: { message: 'Backend API is unavailable' } } },
+      'POST /auth/login': { status: 502, body: { error: { message: 'Backend API is unavailable' } } },
     });
     renderWithProviders(<LoginPage />);
 

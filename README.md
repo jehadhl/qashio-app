@@ -33,7 +33,7 @@ Browser ──► Next.js :3000 ──► NestJS :4000/api ──► PostgreSQL 
 ```
 
 - **The browser only talks to Next.js.** The Next.js `/api/*` route handlers forward to NestJS. The JWTs live in **httpOnly cookies**, and the server turns them into `Authorization: Bearer` headers, so page JavaScript never sees a token.
-- **Signed-in users always get NestJS data.** A small mock API (`data/db.json`) exists only for building the UI without a backend. It is never used for requests that carry an auth cookie.
+- **Mock fallback.** If NestJS isn't configured or can't be reached, the same `/api/*` routes answer from a small mock API (`data/db.json`), so the UI keeps working. Responses carry an `X-Api-Source: nest | mock` header. Login and register always need NestJS.
 
 | Service | URL |
 |---|---|
@@ -128,7 +128,6 @@ The seed is safe to run again: it never creates duplicates. It refuses to run wh
 | Variable | Default | Purpose |
 |---|---|---|
 | `BACKEND_API_URL` | — | NestJS base URL, e.g. `http://localhost:4000/api` (Docker: `http://qashio-api:4000/api`). Read at request time. |
-| `BACKEND_FALLBACK` | `true` | For signed-out requests only: use the mock API when NestJS is unreachable. Signed-in requests always return 502 instead. |
 
 ---
 
@@ -233,7 +232,7 @@ npm run migration:generate  # diff entities against the DB
 
 ## 📨 Events (Kafka)
 
-- **Topics:** `transaction.created` and `transaction.updated`, **3 partitions each**. They are created at startup by `ensureKafkaTopics`, which also grows topics that have fewer partitions.
+- **Topics:** `transaction.created` and `transaction.updated`, **2 partitions each**. They are created at startup by `ensureKafkaTopics`, which also grows topics that have fewer partitions.
 - **Key:** messages are keyed by `userId`, so one user's events stay in order on one partition while different users spread across partitions.
 - **Publisher:** `TransactionEventsPublisher` sends after the transaction is saved. It logs the partition and offset, or the error. A broker outage never fails the HTTP request.
 - **Consumer:** `BudgetEventsConsumer` runs in the API process. For completed expenses it checks every budget on that category and logs `within limit`, a warning at ≥80%, or `exceeded`. It also logs the partition, offset and lag of each event.
@@ -257,57 +256,3 @@ cd qashio-api && npm test
 
 **Backend:** guards, auth service, JWT strategy, Kafka publisher, transactions service.
 
----
-
-## ✅ Requirements checklist
-
-Legend: ✅ done · ⚠️ partial · ❌ missing
-
-### Backend
-
-| Requirement | Status | Notes |
-|---|---|---|
-| NestJS + TypeScript, TypeORM, PostgreSQL, Kafka | ✅ | |
-| Transactions CRUD (`amount`, `category`, `date`, `type`) | ✅ | Plus status, reference, counterparty, narration |
-| `POST/GET /transactions`, `GET/PUT/DELETE /transactions/:id` | ✅ | |
-| Categories: create and list, every transaction has one | ✅ | |
-| Budgets per category and period, spending vs budget | ✅ | `GET /budgets` includes spent, remaining, percentage and exceeded |
-| Emit an event on transaction create or update | ✅ | Kafka |
-| Listen: log activity and check budget usage | ✅ | `BudgetEventsConsumer` |
-| DTO validation | ✅ | Global `AppValidationPipe`, whitelist and forbid unknown fields |
-| Centralised custom error handling | ✅ | `AllExceptionsFilter` |
-| Swagger / OpenAPI | ✅ | `/docs` (non-production) |
-| Custom decorators, guards, pipes, filters | ✅ | |
-| JWT authentication (bonus) | ✅ | Access + rotating refresh tokens, roles |
-| Filtering, sorting and pagination (bonus) | ✅ | |
-| **Summary/report endpoint (bonus)** | ❌ | No income/expense totals for a date range yet |
-| Unit tests for services and controllers (bonus) | ⚠️ | 4 update tests still expect PATCH behaviour after the switch to PUT |
-| `docker-compose up --build` runs everything | ❌ | See Known gaps |
-
-### Frontend
-
-| Requirement | Status | Notes |
-|---|---|---|
-| Next.js App Router, TypeScript, React 18+, MUI v7, React Query | ✅ | |
-| `/transactions` via React Query, 10 per page | ✅ | |
-| Sortable columns and filters | ✅ | Date and Amount sortable; search, date, type, status, category filters |
-| MUI DataGrid | ⚠️ | Table is a custom MUI grid matching `Transactions.fig`, not `@mui/x-data-grid` |
-| Row click opens a detail drawer or modal | ✅ | Drawer with edit and delete |
-| `/transactions/new` with category dropdown, date picker, type selector | ✅ | |
-| Loading spinners or skeletons | ✅ | Table skeleton, button spinners |
-| MUI alerts on error | ✅ | |
-| Empty states | ✅ | "No transactions yet" and "No transactions found" |
-| Zod validation (bonus) | ✅ | |
-| Unit tests (bonus) | ✅ | 85 tests |
-| Global state management (bonus) | ✅ | Zustand (filters synced to the URL, toasts), persisted React Query cache |
-| UI/UX beyond the base design (bonus) | ✅ | Auth pages, account menu, profile, skeletons, brand theme |
-| Type (income/expense) filter and column | ✅ | Type column with badge, amounts signed and coloured (+ income / − expense), Type filter synced to the URL (`?type=`) |
-| **Budgets and summary UI** | ❌ | Not required by the brief; backend budgets have no screen |
-
-### Known gaps
-
-1. **Docker: the API image has no source code.** `qashio-api/.dockerignore` excludes `src` and `test`, so the container cannot start.
-2. **Docker: no migrations on start.** `synchronize` and `migrationsRun` are both off, and nothing runs `migration:run`, so a fresh database has no tables.
-3. **The frontend image doesn't include `data/`,** so the mock API can't work inside Docker. This is fine when NestJS is up.
-4. **No summary endpoint:** income and expense totals for a date range.
-5. **4 failing backend tests** in `transactions.service.spec.ts`: they need rewriting for PUT (full replace).

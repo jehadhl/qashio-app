@@ -22,3 +22,9 @@ export class AuthResponseDto {
   @ApiProperty({ type: AuthTokensDto })
   tokens!: AuthTokensDto;
 }
+
+// What login/register return; the tokens go in httpOnly cookies instead of the body.
+export class AuthUserResponseDto {
+  @ApiProperty({ type: User })
+  user!: User;
+}

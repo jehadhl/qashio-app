@@ -26,11 +26,11 @@ describe('middleware (route guard)', () => {
 
   describe('signed in', () => {
     it.each(['/login', '/register'])('sends %s to /transactions', (path) => {
-      expect(redirectTarget(visit(path, { token: 'abc' }))).toBe('/transactions');
+      expect(redirectTarget(visit(path, { refreshToken: 'abc' }))).toBe('/transactions');
     });
 
     it('lets protected pages through', () => {
-      expect(redirectTarget(visit('/transactions', { token: 'abc' }))).toBeNull();
+      expect(redirectTarget(visit('/transactions', { refreshToken: 'abc' }))).toBeNull();
     });
 
     it('counts a refresh token alone as signed in (access token cookie expired)', () => {

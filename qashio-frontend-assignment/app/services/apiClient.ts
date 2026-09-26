@@ -1,6 +1,8 @@
 import { clearPersistedCache } from '@/app/services/queryCache';
 
-const BASE_URL = '/api';
+const BASE_URL = process.env.BACKEND_API_URL ?? '';
+
+export const apiUrl = (path: string) => `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 
 export interface ApiFieldError {
   field: string;
@@ -27,7 +29,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body' | 'method'> {
 }
 
 const buildUrl = (path: string, params?: QueryParams) => {
-  const url = `${BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = apiUrl(path);
   if (!params) return url;
 
   const search = new URLSearchParams();
@@ -41,7 +43,7 @@ const buildUrl = (path: string, params?: QueryParams) => {
 let refreshInFlight: Promise<boolean> | null = null;
 
 export const refreshSession = (): Promise<boolean> => {
-  refreshInFlight ??= fetch(buildUrl('/auth/refresh'), { method: 'POST', credentials: 'same-origin' })
+  refreshInFlight ??= fetch(buildUrl('/auth/refresh'), { method: 'POST', credentials: 'include' })
     .then((response) => response.ok)
     .catch(() => false)
     .finally(() => {
@@ -58,8 +60,19 @@ const redirectToLogin = () => {
   }
 };
 
-// NestJS wraps single results as { success, data, timestamp }; the mock API returns
-// them bare. Paginated lists ({ data, pagination }) are already the shape we use.
+
+export async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const request = () => fetch(url, { ...init, credentials: 'include' });
+
+  const response = await request();
+  if (response.status !== 401) return response;
+
+  if (await refreshSession()) return request();
+  redirectToLogin();
+  return response;
+}
+
+
 export const unwrapEnvelope = (body: unknown): unknown => {
   if (body && typeof body === 'object' && 'success' in body && 'data' in body && !('pagination' in body)) {
     return (body as { data: unknown }).data;
@@ -70,10 +83,11 @@ export const unwrapEnvelope = (body: unknown): unknown => {
 async function send<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
   const { params, body, skipAuthRefresh, headers, ...init } = options;
 
-  const response = await fetch(buildUrl(path, params), {
+  const doFetch = skipAuthRefresh ? fetch : authFetch;
+  const response = await doFetch(buildUrl(path, params), {
     ...init,
     method,
-    credentials: 'same-origin',
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       ...(body !== undefined && { 'Content-Type': 'application/json' }),
@@ -81,13 +95,6 @@ async function send<T>(method: string, path: string, options: RequestOptions = {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-
-  if (response.status === 401 && !skipAuthRefresh) {
-    if (await refreshSession()) {
-      return send<T>(method, path, { ...options, skipAuthRefresh: true });
-    }
-    redirectToLogin();
-  }
 
   const data = response.status === 204 ? null : await response.json().catch(() => null);
 

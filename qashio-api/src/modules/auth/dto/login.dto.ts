@@ -1,5 +1,5 @@
-import { ApiProperty, PickType } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
 
 export class LoginDto extends PickType(CreateUserDto, ['email'] as const) {
@@ -10,4 +10,9 @@ export class LoginDto extends PickType(CreateUserDto, ['email'] as const) {
   @IsNotEmpty()
   @MaxLength(72)
   password!: string;
+
+  @ApiPropertyOptional({ description: 'Keep the session after the browser closes', default: false })
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean;
 }

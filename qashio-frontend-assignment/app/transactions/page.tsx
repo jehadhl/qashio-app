@@ -24,7 +24,10 @@ function TransactionsPageContent() {
     hydrated,
   );
 
-  const pagination = data?.pagination;
+  // The React Query cache is restored from localStorage on the client, so it can hold
+  // data the server never had. Ignore it until `hydrated` (set in an effect, false on
+  // the server) so the first client render matches the server HTML.
+  const pagination = hydrated ? data?.pagination : undefined;
   const isFiltered = hasActiveFilters(filters);
 
   // The user has no transactions at all (not just none matching a filter): show an
@@ -49,7 +52,7 @@ function TransactionsPageContent() {
 
       {showFilters && <TransactionFilters />}
 
-      {error ? (
+      {hydrated && error ? (
         <Alert severity="error">Error loading transactions</Alert>
       ) : hasNoTransactions ? (
         <Box

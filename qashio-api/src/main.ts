@@ -5,7 +5,6 @@ import { ConfigService, type ConfigType } from '@nestjs/config';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from '@/app.module';
-import { configureApp } from '@/core/app.setup';
 import kafkaConfig from '@/core/config/kafka.config';
 import { Partitioners } from 'kafkajs';
 import { ensureKafkaTopics } from './core/kafka/kafka-topics.initializer';
@@ -17,17 +16,13 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port', 4000);
   const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
-  const corsOrigins = configService.get<string[]>('app.corsOrigins', []);
   const databaseUrl = new URL(configService.getOrThrow<string>('database.url'));
   const databaseHost = `${databaseUrl.host}${databaseUrl.pathname}`;
   const isProd = nodeEnv === 'production';
 
-  configureApp(app, {
-    isProd,
-    cors: { origin: corsOrigins, credentials: true },
-    compression: true,
-    requestLogging: true,
-  });
+  // Guards, validation, error format, serialization, response envelope and the
+  // security/CORS/compression middleware are all registered in AppModule.
+  app.setGlobalPrefix('api');
   app.enableShutdownHooks();
 
   if (!isProd) {

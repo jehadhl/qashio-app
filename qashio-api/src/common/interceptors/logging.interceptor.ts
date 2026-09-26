@@ -7,6 +7,9 @@ export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    // Registered app-wide, so it also sees Kafka events, which have no HTTP request.
+    if (context.getType() !== 'http') return next.handle();
+
     const req = context.switchToHttp().getRequest<Request>();
     const res = context.switchToHttp().getResponse<Response>();
     const start = Date.now();

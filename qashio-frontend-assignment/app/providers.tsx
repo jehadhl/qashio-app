@@ -9,10 +9,8 @@ import { ReactNode, useState } from 'react';
 import { BRAND } from '@/app/components/common/brand';
 import { CACHE_BUSTER, CACHE_MAX_AGE, createQueryClient, queryPersister } from '@/app/services/queryCache';
 
-// Create a custom theme
 const theme = createTheme({
   palette: {
-    // Brand gold everywhere (buttons, links, focused inputs, checkboxes, pagination).
     primary: {
       main: BRAND.main,
       dark: BRAND.dark,

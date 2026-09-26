@@ -23,6 +23,9 @@ module.exports = async () => {
     // The repo is on /mnt/c (Windows drive in WSL): watchman gets no file events there,
     // so new test files would go unnoticed. Jest's own crawler sees them.
     watchman: false,
+    // UI tests type into full MUI forms key by key; on a slow/loaded machine
+    // (e.g. with the dev server running) that can pass Jest's 5s default.
+    testTimeout: 20_000,
     projects: [
       {
         ...base,

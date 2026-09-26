@@ -44,7 +44,7 @@ interface DatabaseSchema {
 }
 
 // Create file path for the database
-const file = join(process.cwd(), 'data', 'db.json');
+const file = join(process.cwd(), 'data', 'data.json');
 
 // Create database adapter
 const adapter = new JSONFile<DatabaseSchema>(file);

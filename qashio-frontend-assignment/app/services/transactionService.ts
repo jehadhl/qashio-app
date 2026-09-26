@@ -1,11 +1,11 @@
-// lib/services/transactionService.ts
+
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startOfDay, endOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { Category, Transaction, TransactionFormData } from '@/app/types';
 import { DatePreset, TransactionFiltersState } from '@/app/hooks/useTransactionStore';
-import { unwrapEnvelope } from '@/app/services/apiClient';
+import { apiUrl, authFetch, unwrapEnvelope } from '@/app/services/apiClient';
 import { categoriesQueryKey } from '@/app/services/categoryService';
 
 interface PaginationInfo {
@@ -25,8 +25,6 @@ const EMPTY_RESPONSE = (page: number, limit: number): TransactionsApiResponse =>
   pagination: { total: 0, page, limit, totalPages: 0 },
 });
 
-// Translate a friendly date preset ("today" / "week" / "month") into the ISO
-// startDate/endDate range the API actually understands.
 const getDateRangeForPreset = (preset: DatePreset): { startDate?: string; endDate?: string } => {
   if (!preset) return {};
 
@@ -65,30 +63,22 @@ const buildQueryParams = (filters: TransactionFiltersState): URLSearchParams => 
   return params;
 };
 
-// NestJS returns `category` as { id, name } and lowercase statuses; the mock returns
-// the category name and capitalised statuses. The UI works with one shape.
-type ApiTransaction = Omit<Transaction, 'category' | 'status' | 'type'> & {
-  category: string | { id: string; name: string } | null;
-  categoryId?: string;
+
+type ApiTransaction = Omit<Transaction, 'category' | 'categoryId' | 'status'> & {
+  category: { id: string; name: string };
   status: string;
-  type?: Transaction['type'];
 };
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 
-export const normalizeTransaction = (raw: ApiTransaction): Transaction => {
-  const category = raw.category && typeof raw.category === 'object' ? raw.category : null;
-  return {
-    ...raw,
-    category: category ? category.name : ((raw.category as string | null) ?? ''),
-    categoryId: category?.id ?? raw.categoryId,
-    status: capitalize(raw.status) as Transaction['status'],
-    type: raw.type ?? 'expense',
-    reference: raw.reference ?? '',
-    narration: raw.narration ?? '',
-    amount: Number(raw.amount),
-  };
-};
+export const normalizeTransaction = (raw: ApiTransaction): Transaction => ({
+  ...raw,
+  category: raw.category.name,
+  categoryId: raw.category.id,
+  status: capitalize(raw.status) as Transaction['status'],
+  // numeric columns can arrive as strings
+  amount: Number(raw.amount),
+});
 
 const fetchTransactions = async (
   filters: TransactionFiltersState,
@@ -96,14 +86,11 @@ const fetchTransactions = async (
 ): Promise<TransactionsApiResponse> => {
   const params = buildQueryParams(filters);
 
-  const response = await fetch(`/api/transactions?${params.toString()}`, {
+  const response = await authFetch(apiUrl(`/transactions?${params.toString()}`), {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
     },
-    // Lets React Query abort this request (via its own AbortController) if the
-    // filters change again - or the component unmounts - before it resolves,
-    // so a fast typist/filterer never gets a stale response race.
     signal,
   });
 
@@ -135,8 +122,7 @@ export interface ApiFieldError {
   message: string;
 }
 
-// Carries the API's structured error (incl. per-field validation details) so the
-// UI can pin server-side messages to the matching inputs, or show a 404 state.
+
 export class TransactionApiError extends Error {
   constructor(
     message: string,
@@ -148,17 +134,15 @@ export class TransactionApiError extends Error {
   }
 }
 
-// NestJS validation errors: [{ field: 'categoryId', messages: [...] }] -> form field errors.
-const fromNestFieldErrors = (errors: unknown): ApiFieldError[] =>
-  Array.isArray(errors)
-    ? errors.map((e: { field: string; messages?: string[] }) => ({
-        field: e.field === 'categoryId' ? 'category' : e.field,
-        message: e.messages?.[0] ?? 'Invalid value',
-      }))
-    : [];
+
+const fieldErrorsFrom = (body: { errors?: { field: string; messages?: string[] }[] } | null): ApiFieldError[] =>
+  (body?.errors ?? []).map(({ field, messages }) => ({
+    field: field === 'categoryId' ? 'category' : field,
+    message: messages?.[0] ?? 'Invalid value',
+  }));
 
 export const request = async <T>(url: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
@@ -167,17 +151,17 @@ export const request = async <T>(url: string, init?: RequestInit): Promise<T> =>
 
   if (!response.ok) {
     throw new TransactionApiError(
-      body?.error?.message ?? `API error: ${response.status}`,
+      // NestJS errors: { message } or { error: { message } }
+      body?.message ?? body?.error?.message ?? `API error: ${response.status}`,
       response.status,
-      body?.error?.details ?? fromNestFieldErrors(body?.errors)
+      fieldErrorsFrom(body)
     );
   }
 
   return unwrapEnvelope(body) as T;
 };
 
-// Form data (category name, capitalised status) -> NestJS body (categoryId, lowercase status).
-// The category id comes from the categories list the form has already loaded.
+
 const toApiPayload = (
   data: Partial<TransactionFormData>,
   categories: Category[] | undefined
@@ -198,7 +182,7 @@ const toApiPayload = (
   return payload;
 };
 
-const transactionUrl = (id: string) => `/api/transactions/${encodeURIComponent(id)}`;
+const transactionUrl = (id: string) => apiUrl(`/transactions/${encodeURIComponent(id)}`);
 
 export const transactionQueryKey = (id: string) => ['transaction', id] as const;
 
@@ -220,14 +204,13 @@ export const useCreateTransaction = () => {
   return useMutation({
     mutationFn: async (payload: TransactionFormData) =>
       normalizeTransaction(
-        await request<ApiTransaction>('/api/transactions', {
+        await request<ApiTransaction>(apiUrl('/transactions'), {
           method: 'POST',
           body: JSON.stringify(
             toApiPayload(payload, queryClient.getQueryData<Category[]>(categoriesQueryKey))
           ),
         })
       ),
-    // Every cached list page may now be out of date, so refetch them all.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
   });
 };
@@ -236,7 +219,6 @@ export const useUpdateTransaction = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // PUT, matching the NestJS API: the whole transaction is replaced, so every field is sent.
     mutationFn: async ({ id, data }: { id: string; data: TransactionFormData }) =>
       normalizeTransaction(
         await request<ApiTransaction>(transactionUrl(id), {

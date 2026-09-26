@@ -9,10 +9,9 @@ import { callsTo, mockFetch, mockRouter, renderWithProviders, testUser } from '@
 
 const CACHE_KEY = 'qashio-query-cache';
 
-// The signed-in user comes from NestJS wrapped in its { success, data } envelope.
 const signedInRoutes = (logoutStatus = 200) => ({
-  'GET /api/users/me': { body: { success: true, data: testUser, timestamp: 'now' } },
-  'POST /api/auth/logout': { status: logoutStatus, body: { success: logoutStatus < 400 } },
+  'GET /users/me': { body: { success: true, data: testUser, timestamp: 'now' } },
+  'POST /auth/logout': { status: logoutStatus, body: { success: logoutStatus < 400 } },
 });
 
 describe('Logout', () => {
@@ -50,7 +49,7 @@ describe('Logout', () => {
       await user.click(screen.getByRole('menuitem', { name: /log out/i }));
 
       await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/login'));
-      expect(callsTo(fetchMock, 'POST', '/api/auth/logout')).toHaveLength(1);
+      expect(callsTo(fetchMock, 'POST', '/auth/logout')).toHaveLength(1);
       expect(queryClient.getQueryData(['transactions', { page: 1 }])).toBeUndefined();
       // Only the still-mounted navbar's own user query may reappear before the redirect
       // unmounts it; nothing from the session is left behind.
@@ -85,7 +84,7 @@ describe('Logout', () => {
     await user.click(screen.getByRole('button', { name: 'Log out' }));
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/login'));
-    expect(callsTo(fetchMock, 'POST', '/api/auth/logout')).toHaveLength(1);
+    expect(callsTo(fetchMock, 'POST', '/auth/logout')).toHaveLength(1);
   });
 
   it('logs out from the profile page', async () => {

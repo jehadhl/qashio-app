@@ -26,7 +26,7 @@ export class AuthService {
     return { user, tokens: await this.issueTokens(user) };
   }
 
-  async login({ email, password }: LoginDto): Promise<AuthResponseDto> {
+  async login({ email, password }: Omit<LoginDto, 'rememberMe'>): Promise<AuthResponseDto> {
     const user = await this.usersService.findByEmailWithPassword(email);
     const passwordOk = await verifyPassword(
       password,
@@ -59,6 +59,12 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     await this.usersService.setRefreshTokenHash(userId, null);
+  }
+
+  // Best effort: an invalid or expired token has nothing left to revoke.
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    const payload = await this.verifyRefreshToken(refreshToken).catch(() => null);
+    if (payload) await this.logout(payload.sub);
   }
 
   private async issueTokens(user: User): Promise<AuthTokensDto> {

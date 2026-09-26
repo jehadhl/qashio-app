@@ -47,7 +47,7 @@ describe('Register page', () => {
     const user = userEvent.setup();
     const router = mockRouter();
     const reply = deferred<MockReply>();
-    const fetchMock = mockFetch({ 'POST /api/auth/register': () => reply.promise });
+    const fetchMock = mockFetch({ 'POST /auth/register': () => reply.promise });
     const { queryClient } = renderWithProviders(<RegisterPage />);
 
     await fillForm(user);
@@ -62,7 +62,7 @@ describe('Register page', () => {
     expect(router.replace).toHaveBeenCalledWith('/transactions');
     expect(queryClient.getQueryData(currentUserQueryKey)).toEqual(testUser);
     // confirmPassword is a UI-only field and is not sent.
-    expect(callsTo(fetchMock, 'POST', '/api/auth/register')).toEqual([
+    expect(callsTo(fetchMock, 'POST', '/auth/register')).toEqual([
       { firstName: 'Demo', lastName: 'User', email: 'demo@qashio.com', password: 'Secret123' },
     ]);
   });
@@ -70,14 +70,14 @@ describe('Register page', () => {
   it('trims names and email before sending', async () => {
     const user = userEvent.setup();
     mockRouter();
-    const fetchMock = mockFetch({ 'POST /api/auth/register': { status: 201, body: { user: testUser } } });
+    const fetchMock = mockFetch({ 'POST /auth/register': { status: 201, body: { user: testUser } } });
     renderWithProviders(<RegisterPage />);
 
     await fillForm(user, { firstName: '  Demo ', lastName: ' User  ', email: ' demo@qashio.com ' });
     await submit(user);
 
     await waitFor(() =>
-      expect(callsTo(fetchMock, 'POST', '/api/auth/register')[0]).toMatchObject({
+      expect(callsTo(fetchMock, 'POST', '/auth/register')[0]).toMatchObject({
         firstName: 'Demo',
         lastName: 'User',
         email: 'demo@qashio.com',
@@ -89,7 +89,7 @@ describe('Register page', () => {
     const user = userEvent.setup();
     const router = mockRouter();
     mockFetch({
-      'POST /api/auth/register': {
+      'POST /auth/register': {
         status: 409,
         body: { success: false, error: { code: 'BACKEND_ERROR', message: 'Email is already registered' } },
       },

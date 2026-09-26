@@ -1,11 +1,18 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Observable, throwError } from 'rxjs';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost): void {
+  catch(exception: unknown, host: ArgumentsHost): Observable<never> | void {
+    // Registered app-wide, so it also sees Kafka event errors: hand those back to
+    // Nest's RPC handling instead of writing an HTTP response that doesn't exist.
+    if (host.getType() !== 'http') {
+      return throwError(() => exception);
+    }
+
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();

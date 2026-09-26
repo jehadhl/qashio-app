@@ -16,12 +16,11 @@ export const authService = {
   register: (payload: RegisterPayload) =>
     apiClient.post<AuthResponse>('/auth/register', payload, { skipAuthRefresh: true }),
   refresh: refreshSession,
-  logout: () => apiClient.post<{ success: true }>('/auth/logout', undefined, { skipAuthRefresh: true }),
+  logout: () => apiClient.post<void>('/auth/logout', undefined, { skipAuthRefresh: true }),
 };
 
 export const currentUserQueryKey = ['currentUser'] as const;
 
-// The signed-in user (GET /users/me), shown in the navbar, sidebar and profile page.
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: currentUserQueryKey,

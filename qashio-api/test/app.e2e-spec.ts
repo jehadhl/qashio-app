@@ -11,7 +11,6 @@ import request = require('supertest');
 import type { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '@/app.module';
-import { configureApp } from '@/core/app.setup';
 import { KAFKA_CLIENT, KAFKA_TOPICS } from '@/core/kafka/kafka.constants';
 import { prepareTestDatabase, truncateAll } from './test-db';
 
@@ -73,9 +72,9 @@ describe('Qashio API (e2e)', () => {
       .compile();
 
     app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
-    // Same HTTP setup as main.ts; CORS, compression and request logging are production
-    // extras that don't change responses, so they're left off here.
-    configureApp(app, { isProd: false });
+    // Everything else (guards, validation, error format, envelope, middleware) comes
+    // from AppModule itself; only the prefix is set in main.ts, as here.
+    app.setGlobalPrefix('api');
     await app.init();
 
     await truncateAll(app.get(DataSource));
@@ -99,6 +98,24 @@ describe('Qashio API (e2e)', () => {
       const res = await api().get('/api/users/me');
 
       expect(res.headers['x-content-type-options']).toBe('nosniff');
+    });
+
+    it('answers CORS preflight for the frontend origin, with security headers too', async () => {
+      const res = await api()
+        .options('/api/transactions')
+        .set('Origin', 'http://localhost:3000')
+        .set('Access-Control-Request-Method', 'POST')
+        .expect(204);
+
+      expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000');
+      expect(res.headers['access-control-allow-credentials']).toBe('true');
+      expect(res.headers['x-content-type-options']).toBe('nosniff');
+    });
+
+    it('does not allow other origins', async () => {
+      const res = await api().get('/api/users/me').set('Origin', 'https://evil.example');
+
+      expect(res.headers['access-control-allow-origin']).toBeUndefined();
     });
 
     it('rejects protected routes without a token', async () => {

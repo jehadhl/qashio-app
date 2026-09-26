@@ -1,7 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -9,14 +8,20 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import type { Request, Response } from 'express';
 import { Public } from '@/common/decorators/public.decorator';
+import {
+  clearAuthCookies,
+  REFRESH_TOKEN_COOKIE,
+  REMEMBER_ME_COOKIE,
+  setAuthCookies,
+} from '@/modules/auth/auth-cookies';
 import { AuthService } from '@/modules/auth/auth.service';
-import { AuthResponseDto, AuthTokensDto } from '@/modules/auth/dto/auth-response.dto';
+import { AuthUserResponseDto } from '@/modules/auth/dto/auth-response.dto';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
-import { RefreshTokenDto } from '@/modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
 
+// Tokens live only in httpOnly cookies set here, so they never reach page JavaScript.
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -24,37 +29,59 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  @ApiCreatedResponse({ type: AuthResponseDto })
+  @ApiCreatedResponse({ type: AuthUserResponseDto })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   @ApiConflictResponse({ description: 'Email is already registered' })
-  register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthUserResponseDto> {
+    const { user, tokens } = await this.authService.register(dto);
+    setAuthCookies(res, tokens, true);
+    return { user };
   }
 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiOkResponse({ type: AuthUserResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
-  login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(dto);
+  async login(
+    @Body() { rememberMe, ...credentials }: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthUserResponseDto> {
+    const { user, tokens } = await this.authService.login(credentials);
+    setAuthCookies(res, tokens, rememberMe === true);
+    return { user };
   }
 
+  // Swaps the refresh token cookie for a new pair (refresh tokens are single-use).
   @Public()
   @Post('refresh')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: AuthTokensDto })
-  @ApiUnauthorizedResponse({ description: 'Invalid, expired or already-used refresh token' })
-  refresh(@Body() { refreshToken }: RefreshTokenDto): Promise<AuthTokensDto> {
-    return this.authService.refresh(refreshToken);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'New auth cookies set' })
+  @ApiUnauthorizedResponse({ description: 'Missing, invalid, expired or already-used refresh token' })
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    const refreshToken: string | undefined = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    try {
+      if (!refreshToken) throw new UnauthorizedException('No refresh token');
+      const tokens = await this.authService.refresh(refreshToken);
+      setAuthCookies(res, tokens, Boolean(req.cookies?.[REMEMBER_ME_COOKIE]));
+    } catch (error) {
+      // The session is over: drop the cookies so the app sends the user to /login.
+      if (error instanceof UnauthorizedException) clearAuthCookies(res);
+      throw error;
+    }
   }
 
+  // Public so an expired access token can still sign out; always clears the cookies.
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiBearerAuth()
-  @ApiNoContentResponse({ description: 'Refresh token revoked' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
-  logout(@CurrentUser('id') userId: string): Promise<void> {
-    return this.authService.logout(userId);
+  @ApiNoContentResponse({ description: 'Refresh token revoked and cookies cleared' })
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    const refreshToken: string | undefined = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    if (refreshToken) await this.authService.revokeRefreshToken(refreshToken);
+    clearAuthCookies(res);
   }
 }

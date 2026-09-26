@@ -65,7 +65,7 @@ describe('Transaction type (income / expense)', () => {
   describe('filter', () => {
     it('sets the type filter and goes back to page 1', async () => {
       const user = userEvent.setup();
-      mockFetch({ 'GET /api/categories': { body: [] } });
+      mockFetch({ 'GET /categories': { body: [] } });
       useTransactionStore.setState({ filters: { ...DEFAULT_FILTERS, page: 3 } });
       renderWithProviders(<TransactionFilters />);
 
@@ -79,7 +79,7 @@ describe('Transaction type (income / expense)', () => {
 
     it('counts as an active filter, so Reset clears it', async () => {
       const user = userEvent.setup();
-      mockFetch({ 'GET /api/categories': { body: [] } });
+      mockFetch({ 'GET /categories': { body: [] } });
       useTransactionStore.setState({ filters: { ...DEFAULT_FILTERS, type: 'expense' } });
       renderWithProviders(<TransactionFilters />);
 
@@ -97,7 +97,7 @@ describe('Transaction type (income / expense)', () => {
 
     it('sends ?type= when filtering by type', async () => {
       const fetchMock = mockFetch({
-        'GET /api/transactions': { body: { data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } } },
+        'GET /transactions': { body: { data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } } },
       });
 
       renderHook(() => useTransactions({ ...DEFAULT_FILTERS, type: 'income' }), { wrapper });
@@ -109,7 +109,7 @@ describe('Transaction type (income / expense)', () => {
 
     it('omits type when not filtering', async () => {
       const fetchMock = mockFetch({
-        'GET /api/transactions': { body: { data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } } },
+        'GET /transactions': { body: { data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } } },
       });
 
       renderHook(() => useTransactions(DEFAULT_FILTERS), { wrapper });
@@ -121,7 +121,7 @@ describe('Transaction type (income / expense)', () => {
 
     it("reads NestJS's type from the response", async () => {
       mockFetch({
-        'GET /api/transactions': {
+        'GET /transactions': {
           body: {
             data: [{ ...tx({}), type: 'income', status: 'completed', category: { id: 'c1', name: 'Salary' } }],
             pagination: { total: 1, page: 1, limit: 10, totalPages: 1 },

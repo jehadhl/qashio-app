@@ -1,21 +1,7 @@
-
 import { z } from 'zod';
 
-
-export const transactionQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  searchTerm: z.string().max(100).optional(),
-  status: z.enum(['Completed', 'Pending', 'Failed']).optional(),
-  type: z.enum(['income', 'expense']).optional(),
-  category: z.string().trim().max(50).optional(),
-  sortBy: z.enum(['date', 'amount']).default('date'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
-
-
+// Transaction form validation. The API validates again; the service maps the
+// category name to its id before sending.
 export const createTransactionSchema = z.object({
   date: z
     .string({ required_error: 'Date is required' })
@@ -56,20 +42,4 @@ export const createTransactionSchema = z.object({
   // Reject unknown keys (e.g. a client-supplied `id`) instead of silently accepting them.
   .strict();
 
-
-export const updateTransactionSchema = createTransactionSchema
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, 'At least one field must be provided');
-
-// Ids are uuids for new rows, but seed data uses ids like "uuid-1234", so allow
-// a safe character set rather than strict uuid format.
-export const transactionIdSchema = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[A-Za-z0-9_-]+$/, 'Invalid transaction id');
-
-
-export type TransactionQuery = z.infer<typeof transactionQuerySchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
-export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
