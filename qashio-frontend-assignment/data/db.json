@@ -1,0 +1,206 @@
+{
+  "transactions": [
+    {
+      "id": "uuid-1234",
+      "date": "2025-04-27T14:32:00.000Z",
+      "reference": "INV-1001",
+      "counterparty": "Acme Corp",
+      "amount": 250,
+      "status": "Completed",
+      "category": "Utilities",
+      "narration": "Monthly office electricity bill"
+    },
+    {
+      "id": "uuid-2345",
+      "date": "2025-04-25T10:15:00.000Z",
+      "reference": "INV-985",
+      "counterparty": "Tech Solutions Inc",
+      "amount": 1250,
+      "status": "Pending",
+      "category": "IT Services",
+      "narration": "Website maintenance fee"
+    },
+    {
+      "id": "uuid-3456",
+      "date": "2025-04-20T09:00:00.000Z",
+      "reference": "INV-879",
+      "counterparty": "Office Supplies Ltd",
+      "amount": 75.5,
+      "status": "Completed",
+      "category": "Office Supplies",
+      "narration": "Stationery and printer cartridges"
+    },
+    {
+      "id": "uuid-4567",
+      "date": "2025-04-18T16:45:00.000Z",
+      "reference": "INV-742",
+      "counterparty": "Cloudex Services",
+      "amount": 450,
+      "status": "Failed",
+      "category": "Software",
+      "narration": "Cloud storage subscription"
+    },
+    {
+      "id": "uuid-5678",
+      "date": "2025-04-15T11:30:00.000Z",
+      "reference": "INV-654",
+      "counterparty": "City Water",
+      "amount": 120.75,
+      "status": "Completed",
+      "category": "Utilities",
+      "narration": "Water bill payment"
+    },
+    {
+      "id": "uuid-6789",
+      "date": "2025-04-12T13:20:00.000Z",
+      "reference": "INV-598",
+      "counterparty": "Marketing Pros",
+      "amount": 3000,
+      "status": "Pending",
+      "category": "Marketing",
+      "narration": "Monthly digital marketing retainer"
+    },
+    {
+      "id": "uuid-7890",
+      "date": "2025-04-10T09:15:00.000Z",
+      "reference": "INV-521",
+      "counterparty": "Rent Co",
+      "amount": 2800,
+      "status": "Completed",
+      "category": "Rent",
+      "narration": "Office space monthly rent"
+    },
+    {
+      "id": "uuid-8901",
+      "date": "2025-04-05T15:40:00.000Z",
+      "reference": "INV-487",
+      "counterparty": "Training Services",
+      "amount": 850,
+      "status": "Completed",
+      "category": "Training",
+      "narration": "Staff development workshop"
+    },
+    {
+      "id": "uuid-9012",
+      "date": "2025-04-03T10:00:00.000Z",
+      "reference": "INV-443",
+      "counterparty": "Insurance Co",
+      "amount": 1450,
+      "status": "Completed",
+      "category": "Insurance",
+      "narration": "Business liability insurance"
+    },
+    {
+      "id": "uuid-0123",
+      "date": "2025-04-01T12:10:00.000Z",
+      "reference": "INV-412",
+      "counterparty": "Telecom Provider",
+      "amount": 350.25,
+      "status": "Failed",
+      "category": "Utilities",
+      "narration": "Internet and phone services"
+    },
+    {
+      "id": "uuid-1235",
+      "date": "2025-03-29T14:00:00.000Z",
+      "reference": "INV-398",
+      "counterparty": "Cleaning Services",
+      "amount": 200,
+      "status": "Completed",
+      "category": "Maintenance",
+      "narration": "Weekly office cleaning"
+    },
+    {
+      "id": "uuid-2346",
+      "date": "2025-03-25T09:30:00.000Z",
+      "reference": "INV-356",
+      "counterparty": "Coffee Supplies",
+      "amount": 95.5,
+      "status": "Completed",
+      "category": "Office Supplies",
+      "narration": "Coffee and refreshment supplies"
+    },
+    {
+      "id": "dfc2c039-57d8-4bf2-9269-6db33010cdc8",
+      "date": "2026-09-24T23:44:39.864Z",
+      "reference": "INV-912",
+      "counterparty": "SDASD",
+      "amount": 99,
+      "status": "Completed",
+      "category": "IT Services",
+      "narration": "ADASDASD"
+    },
+    {
+      "id": "c7854665-3c63-4bec-9e4e-f56c50d7eb3f",
+      "date": "2026-09-24T23:50:30.984Z",
+      "reference": "INV-1283",
+      "counterparty": "FSDAFDF",
+      "amount": 3123,
+      "status": "Pending",
+      "category": "Software",
+      "narration": "ASDADFAD"
+    }
+  ],
+  "categories": [
+    {
+      "id": "1a77bcd8-16ad-4ac0-aab6-e9b55e9677ae",
+      "name": "Utilities",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "019e2f54-fbcf-40e6-99a2-69c44005f19c",
+      "name": "IT Services",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "c1f92a44-1a05-4fbe-acb8-a79628027c01",
+      "name": "Office Supplies",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "4eaa43d9-0b04-401f-8e2a-3be5368d474b",
+      "name": "Software",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "40badab7-1b54-4366-a486-950cb0f1b75d",
+      "name": "Marketing",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "e3f00a48-f654-40f6-a22b-cf282b963316",
+      "name": "Rent",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "5c4f2598-8e8d-4510-93b9-eae013f045bf",
+      "name": "Training",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "aa38e947-a25e-4238-b470-33a2b5a27adf",
+      "name": "Insurance",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "e24954de-4c3a-454e-9b96-bc2222a92359",
+      "name": "Maintenance",
+      "createdAt": "2026-09-25T07:25:39.288Z"
+    },
+    {
+      "id": "81ecc9ba-bba4-44c7-ab76-de0544bb2499",
+      "name": "hello",
+      "createdAt": "2026-09-25T07:29:38.852Z"
+    },
+    {
+      "id": "06e191ea-f862-4259-a7a1-1c3286832f9a",
+      "name": "gaming",
+      "createdAt": "2026-09-25T07:32:32.722Z"
+    },
+    {
+      "id": "fa34de8b-1471-4794-b41c-68474189b1ed",
+      "name": "heladopo",
+      "createdAt": "2026-09-25T07:32:53.235Z"
+    }
+  ]
+}
