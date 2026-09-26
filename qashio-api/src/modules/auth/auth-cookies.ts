@@ -10,9 +10,9 @@ export const readCookie = (
   req: Request | undefined,
   name: string,
 ): string | undefined => {
-  const value: unknown = (req?.cookies as Record<string, unknown> | undefined)?.[
-    name
-  ];
+  const value: unknown = (
+    req?.cookies as Record<string, unknown> | undefined
+  )?.[name];
   return typeof value === 'string' ? value : undefined;
 };
 

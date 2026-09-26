@@ -75,6 +75,6 @@ export class AppModule implements NestModule {
         compression({ threshold: 1024 }),
         cookieParser(),
       )
-      .forRoutes('*');
+      .forRoutes('{*splat}');
   }
 }

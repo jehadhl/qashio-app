@@ -54,14 +54,9 @@ Browser ────┤
 docker-compose up --build
 ```
 
-> ⚠️ **Not working from a clean checkout yet.** See [Known gaps](#known-gaps): the API image is missing its source, and migrations don't run automatically. Until that's fixed, use [Local development](#-local-development).
+The API container runs the migrations and the seed (demo account + categories) on every start, then starts NestJS. Both are safe to re-run.
 
-Once the stack is up, create the tables and the demo account:
-
-```bash
-docker compose exec qashio-api npm run migration:run
-docker compose exec qashio-api npm run seed
-```
+> Ports 3000, 4000, 5432 and 9092 must be free: stop any local `npm run dev` / `start:dev` first.
 
 Kafka UI is optional:
 
@@ -252,28 +247,3 @@ cd qashio-api && npm test
 **Backend:** guards, auth controller (cookies set, refreshed and cleared), auth service, JWT strategy (cookie or Bearer token), Kafka publisher, transactions service.
 
 
----
-
-## ✅ Requirements checklist
-
-**Overall: ~93% complete.** All required features are built and all tests pass (API 140, frontend 60). The main gap is the one-command Docker start.
-
-| Area | Status | Score |
-|---|---|---|
-| Transactions CRUD (amount, category, date, type) | ✅ Done | 100% |
-| Categories (create, list, required on transactions) | ✅ Done | 100% |
-| Budgets per category + period, spending vs. budget | ✅ Done | 100% |
-| Kafka events on create/update + budget-check consumer | ✅ Done | 100% |
-| DTO validation, global error filter, Swagger, custom decorators, JWT | ✅ Done | 100% |
-| `/transactions` page: React Query, 10 per page, sort, filters | ✅ Done (MUI Table, not DataGrid) | 95% |
-| Detail drawer, `/transactions/new` form (category, date picker, type) | ✅ Done | 100% |
-| Loading skeletons, MUI error alerts, empty states | ✅ Done | 100% |
-| Backend bonus: JWT, guards/pipes/filters, filtering/sorting/pagination, unit tests | ✅ Done | 100% |
-| Backend bonus: summary/report endpoint (`GET /transactions/summary`) | ✅ Done | 100% |
-| Frontend bonus: Zod, UI tests, Zustand, UX extras, filters | ✅ Done | 100% |
-| `docker-compose up --build` runs everything | ⚠️ Broken | 40% |
-
-### Known gaps
-
-- **Docker API image:** `qashio-api/.dockerignore` excludes `src`, so the API container has no source code.
-- **Migrations:** they don't run on container start; run `migration:run` and `seed` by hand.

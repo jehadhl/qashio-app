@@ -8,7 +8,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import request from 'supertest';
-import type { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '@/app.module';
 import { KAFKA_CLIENT, KAFKA_TOPICS } from '@/core/kafka/kafka.constants';
