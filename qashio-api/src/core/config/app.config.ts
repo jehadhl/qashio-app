@@ -8,5 +8,5 @@ export default registerAs('app', () => ({
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
-  bodyLimit: process.env.BODY_LIMIT ?? '1mb',
+  bodyLimit: process.env.BODY_LIMIT || '1mb',
 }));

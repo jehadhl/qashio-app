@@ -117,8 +117,9 @@ The seed is safe to run again: it never creates duplicates. It refuses to run wh
 | `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token lifetime |
 | `PORT` | `4000` | HTTP port |
 | `CORS_ORIGIN` | `http://localhost:3000` | Allowed origins (comma-separated) |
-| `KAFKA_BROKER` | `localhost:9092` | Brokers (comma-separated) |
-| `KAFKA_CLIENT_ID` / `KAFKA_GROUP_ID` | `qashio-api` | Kafka client id and consumer group (Nest appends `-server` to the group) |
+| `BODY_LIMIT` | `1mb` | Max request body size (JSON and form); larger bodies get `413` |
+| `THROTTLE_TTL_MS` | `60000` | Rate-limit window in milliseconds |
+| `THROTTLE_LIMIT` | `4` | Max requests per client IP per window, shared across all routes; over it gets `429` |
 | `SEED_DEMO_EMAIL` / `SEED_DEMO_PASSWORD` | `demo@qashio.com` / `Demo@12345` | Demo account |
 
 ### Frontend (`qashio-frontend-assignment/.env.local`)
@@ -147,6 +148,8 @@ src/
 ### Endpoints (all under `/api`)
 
 Every route requires the access token (the `token` httpOnly cookie, or `Authorization: Bearer <accessToken>`) unless marked **public**. Successful responses are wrapped as `{ success, data, timestamp }`; paginated ones as `{ success, data, pagination }`.
+
+Every route, public ones included, is rate limited to `THROTTLE_LIMIT` requests per `THROTTLE_TTL_MS` per client IP (default 4 per minute, `429 Too Many Requests` beyond that), and request bodies are capped at `BODY_LIMIT` (default `1mb`, `413 Payload Too Large` beyond that).
 
 | Method | Path | Notes |
 |---|---|---|
