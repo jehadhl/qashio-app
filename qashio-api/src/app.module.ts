@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -21,6 +22,7 @@ import { AppValidationPipe } from '@/common/pipes/validation.pipe';
 import configs from '@/core/config';
 import appConfig from '@/core/config/app.config';
 import databaseConfig from '@/core/config/database.config';
+import throttleConfig from '@/core/config/throttle.config';
 import { ENV_FILE_PATHS } from '@/core/config/env-files';
 import { buildTypeOrmOptions } from '@/core/database/typeorm.options';
 import { KafkaModule } from '@/core/kafka/kafka.module';
@@ -43,6 +45,12 @@ import { UsersModule } from '@/modules/users/users.module';
       useFactory: (db: ConfigType<typeof databaseConfig>) =>
         buildTypeOrmOptions(db),
     }),
+    ThrottlerModule.forRootAsync({
+      inject: [throttleConfig.KEY],
+      useFactory: (throttle: ConfigType<typeof throttleConfig>) => [
+        { ttl: throttle.ttl, limit: throttle.limit },
+      ],
+    }),
     KafkaModule,
     AuthModule,
     UsersModule,
@@ -51,6 +59,7 @@ import { UsersModule } from '@/modules/users/users.module';
     BudgetsModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_PIPE, useClass: AppValidationPipe },

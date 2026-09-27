@@ -9,6 +9,18 @@ import {
 import type { Request, Response } from 'express';
 import { Observable, throwError } from 'rxjs';
 
+function isExposedHttpError(
+  exception: unknown,
+): exception is { status: number; message: string } {
+  return (
+    exception instanceof Error &&
+    'expose' in exception &&
+    exception.expose === true &&
+    'status' in exception &&
+    typeof exception.status === 'number'
+  );
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -27,7 +39,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+        : isExposedHttpError(exception)
+          ? exception.status
+          : HttpStatus.INTERNAL_SERVER_ERROR;
 
     let message: string | string[] = 'Internal server error';
     let errors: unknown;
@@ -40,6 +54,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // Per-field details from AppValidationPipe: [{ field, messages }]
       if (typeof body === 'object' && body && 'errors' in body)
         errors = body.errors;
+    } else if (isExposedHttpError(exception)) {
+      message = exception.message;
     }
 
     if (status >= 500) {

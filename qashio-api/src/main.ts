@@ -19,10 +19,11 @@ async function bootstrap() {
   const databaseUrl = new URL(configService.getOrThrow<string>('database.url'));
   const databaseHost = `${databaseUrl.host}${databaseUrl.pathname}`;
   const isProd = nodeEnv === 'production';
+  const bodyLimit = configService.get<string>('app.bodyLimit', '1mb');
 
-  // Guards, validation, error format, serialization, response envelope and the
-  // security/CORS/compression middleware are all registered in AppModule.
   app.setGlobalPrefix('api');
+  app.useBodyParser('json', { limit: bodyLimit });
+  app.useBodyParser('urlencoded', { limit: bodyLimit, extended: true });
   app.enableShutdownHooks();
 
   if (!isProd) {
@@ -33,8 +34,6 @@ async function bootstrap() {
       .build();
     SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));
   }
-
-  // Kafka consumer (e.g. BudgetEventsConsumer) runs in this same process, next to HTTP.
   const kafka =
     configService.getOrThrow<ConfigType<typeof kafkaConfig>>('kafka');
   await ensureKafkaTopics(kafka.brokers, kafka.clientId);
