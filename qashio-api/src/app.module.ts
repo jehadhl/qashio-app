@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import compression from 'compression';
@@ -26,6 +27,7 @@ import throttleConfig from '@/core/config/throttle.config';
 import { ENV_FILE_PATHS } from '@/core/config/env-files';
 import { buildTypeOrmOptions } from '@/core/database/typeorm.options';
 import { KafkaModule } from '@/core/kafka/kafka.module';
+import { OutboxModule } from '@/core/outbox/outbox.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { BudgetsModule } from '@/modules/budgets/budgets.module';
 import { CategoriesModule } from '@/modules/categories/categories.module';
@@ -51,7 +53,9 @@ import { UsersModule } from '@/modules/users/users.module';
         { ttl: throttle.ttl, limit: throttle.limit },
       ],
     }),
+    ScheduleModule.forRoot(),
     KafkaModule,
+    OutboxModule,
     AuthModule,
     UsersModule,
     CategoriesModule,

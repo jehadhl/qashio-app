@@ -1,4 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { DataSource, EntityManager } from 'typeorm';
+import { KAFKA_TOPICS } from '@/core/kafka/kafka.constants';
+import { OutboxService } from '@/core/outbox/outbox.service';
 import { CategoriesService } from '@/modules/categories/categories.service';
 import { CreateTransactionDto } from '@/modules/transactions/dto/create-transaction.dto';
 import { TransactionQueryDto } from '@/modules/transactions/dto/transaction-query.dto';
@@ -15,14 +19,17 @@ import {
 } from '@/modules/transactions/enums/transaction.enums';
 import { TransactionsRepository } from '@/modules/transactions/transactions.repository';
 import { Transaction } from '@/modules/transactions/entities/transactions.entity';
-import { TransactionEventsPublisher } from '@/modules/transactions/events/transaction-events.publisher';
+import { toTransactionEventPayload } from '@/modules/transactions/events/transaction-event.mapper';
+
+type TransactionTopic = (typeof KAFKA_TOPICS)[keyof typeof KAFKA_TOPICS];
 
 @Injectable()
 export class TransactionsService {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly categoriesService: CategoriesService,
-    private readonly transactionEvents: TransactionEventsPublisher,
+    private readonly dataSource: DataSource,
+    private readonly outbox: OutboxService,
   ) {}
 
   async create(
@@ -46,10 +53,11 @@ export class TransactionsService {
       narration: dto.narration ?? null,
     });
 
-    const saved = await this.transactionsRepository.save(transaction);
+    const saved = await this.saveWithEvent(
+      transaction,
+      KAFKA_TOPICS.TRANSACTION_CREATED,
+    );
     saved.category = category;
-
-    await this.transactionEvents.publishCreated(saved);
     return saved;
   }
 
@@ -93,14 +101,33 @@ export class TransactionsService {
     transaction.category = category;
     transaction.categoryId = category.id;
 
-    const saved = await this.transactionsRepository.save(transaction);
-    await this.transactionEvents.publishUpdated(saved);
-    return saved;
+    return this.saveWithEvent(transaction, KAFKA_TOPICS.TRANSACTION_UPDATED);
   }
 
   async remove(userId: string, id: string): Promise<void> {
     const transaction = await this.findOne(userId, id);
     await this.transactionsRepository.remove(transaction);
+  }
+
+  // The row and its outbox event commit together or not at all; the relay publishes later,
+  // so a Kafka outage never fails the request or loses the event.
+  private saveWithEvent(
+    transaction: Transaction,
+    topic: TransactionTopic,
+  ): Promise<Transaction> {
+    return this.dataSource.transaction(async (manager: EntityManager) => {
+      const saved = await manager.save(transaction);
+      const eventId = randomUUID();
+      await this.outbox.add(manager, {
+        id: eventId,
+        aggregateType: 'transaction',
+        aggregateId: saved.id,
+        topic,
+        messageKey: saved.userId,
+        payload: toTransactionEventPayload(saved, eventId),
+      });
+      return saved;
+    });
   }
 
   // Completed income/expense totals for a date range, overall and per category

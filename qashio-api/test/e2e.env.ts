@@ -24,3 +24,10 @@ process.env.BCRYPT_ROUNDS = '4'; // fast hashing in tests only
 // it would use its own client id and consumer group, never the dev app's.
 process.env.KAFKA_CLIENT_ID = 'qashio-api-e2e';
 process.env.KAFKA_GROUP_ID = 'qashio-api-e2e';
+
+// Rate limiting is covered by its own tests; the suites make far more requests than
+// the production limit allows.
+process.env.THROTTLE_LIMIT = '100000';
+
+// The relay's timer must not race the assertions: tests drive it with relay.tick().
+process.env.OUTBOX_RELAY_INTERVAL_MS = '3600000';

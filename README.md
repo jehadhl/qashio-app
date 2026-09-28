@@ -121,6 +121,13 @@ The seed is safe to run again: it never creates duplicates. It refuses to run wh
 | `THROTTLE_TTL_MS` | `60000` | Rate-limit window in milliseconds |
 | `THROTTLE_LIMIT` | `4` | Max requests per client IP per window, shared across all routes; over it gets `429` |
 | `SEED_DEMO_EMAIL` / `SEED_DEMO_PASSWORD` | `demo@qashio.com` / `Demo@12345` | Demo account |
+| `OUTBOX_RELAY_INTERVAL_MS` | `1000` | How often the relay polls the outbox |
+| `OUTBOX_BATCH_SIZE` | `50` | Rows claimed per batch (a full batch triggers another in the same tick) |
+| `OUTBOX_MAX_ATTEMPTS` | `10` | Permanent failures before an event becomes `FAILED` |
+| `OUTBOX_BACKOFF_BASE_MS` / `OUTBOX_BACKOFF_MAX_MS` | `1000` / `60000` | Exponential backoff start and cap (the cap is also the wait while Kafka is down) |
+| `OUTBOX_RETENTION_DAYS` | `7` | Age after which `SENT` outbox rows and `processed_events` are deleted |
+| `OUTBOX_STUCK_THRESHOLD_MIN` | `5` | Health check warns when the oldest `PENDING` event is older than this |
+| `CONSUMER_MAX_RETRIES` | `5` | Redeliveries of a failing message before the consumer gives up on it |
 
 ### Frontend (`qashio-frontend-assignment/.env.local`)
 
@@ -141,7 +148,7 @@ src/
   common/      decorators (@CurrentUser, @Public, @Roles, @Trim, @NormalizeEmail),
                guards (JWT, roles), pipes (validation), filters (all exceptions),
                interceptors (logging, response envelope), helpers, transformers
-  core/        config, database (data source, migrations, seeds), kafka (module, topics)
+  core/        config, database (data source, migrations, seeds), kafka (module, topics), outbox (relay, idempotency, jobs)
   modules/     auth, users, categories, transactions (+ events), budgets (+ Kafka consumer)
 ```
 
@@ -185,7 +192,7 @@ Every route, public ones included, is rate limited to `THROTTLE_LIMIT` requests 
 
 ### Database
 
-Migrations live in `src/core/database/migrations`: users, categories, transactions and budgets.
+Migrations live in `src/core/database/migrations`: users, categories, transactions, budgets, and the outbox (`outbox_events`, `processed_events`).
 
 ```bash
 npm run migration:run       # apply
@@ -233,6 +240,85 @@ npm run migration:generate  # diff entities against the DB
 
 
 
+## 📨 Events (Kafka)
+
+Creating or updating a transaction emits `transaction.created` / `transaction.updated` (key = `userId`, so one user's events stay in order on one partition). The budgets module consumes them and logs a warning when a budget passes 80% or is exceeded.
+
+### Event delivery guarantees
+
+**Transactional outbox.** The HTTP request never talks to Kafka. `TransactionsService` saves the transaction **and** inserts an `outbox_events` row in one database transaction, so both are committed or neither is. The event's `eventId` is the outbox row id, generated in code so it is part of the payload. A Kafka outage cannot fail the request or lose the event.
+
+**Relay (at-least-once).** `OutboxRelay` polls every `OUTBOX_RELAY_INTERVAL_MS`:
+
+```sql
+SELECT * FROM outbox_events
+WHERE status = 'PENDING' AND next_attempt_at <= now()
+  AND NOT EXISTS (/* an earlier PENDING row for the same key that is waiting for its backoff */)
+ORDER BY created_at LIMIT $batch
+FOR UPDATE SKIP LOCKED
+```
+
+- Each row is published with key = `message_key`, value = `payload` and header `event-id`, and the relay waits for the broker ack before marking it `SENT`.
+- `SKIP LOCKED` lets several API instances run relays without publishing a row twice. A `running` flag stops ticks from overlapping, and a full batch triggers another batch in the same tick so a backlog drains quickly.
+- If a row fails, later rows with the same key are skipped for the rest of the batch. The `NOT EXISTS` filter keeps them waiting until the earlier row is sent, so one user's events are never reordered. A `FAILED` row no longer blocks its key.
+- A crash between publishing and marking `SENT` means the event is sent again, so delivery is **at-least-once** and consumers must be idempotent.
+
+**Retry: transient vs permanent** (`isTransientKafkaError`):
+
+| Failure | Examples | Effect |
+|---|---|---|
+| **Transient**: Kafka unreachable | `KafkaJSConnectionError`, `KafkaJSRequestTimeoutError`, `KafkaJSNumberOfRetriesExceeded`, `KafkaJSBrokerNotFound` | `attempts` unchanged, `last_error` set, retried after `OUTBOX_BACKOFF_MAX_MS`, **forever**. The rest of the batch is deferred too, without trying. An outage never makes an event `FAILED`. |
+| **Permanent**: the message itself | message too large, unknown topic, invalid record, serialization | `attempts + 1`, retried after `min(base · 2^(attempts-1), max)` + 0–20% jitter. At `OUTBOX_MAX_ATTEMPTS` the row becomes `FAILED`. |
+
+A retried error keeps its cause: `NumberOfRetriesExceeded` wrapping "unknown topic" counts as permanent.
+
+**Idempotent consumer.** `BudgetEventsConsumer` runs each message in one DB transaction. It first inserts `(eventId, 'budget-consumer')` into `processed_events` (`ON CONFLICT DO NOTHING`); a conflict means it's a duplicate and is logged `↷ duplicate`. Then it runs the budget check. On an error the transaction rolls back (so the event is *not* marked processed) and the error is rethrown, so Kafka redelivers the message. After `CONSUMER_MAX_RETRIES` redeliveries of the same `topic:partition:offset`, the consumer logs the full payload and moves on, so a poison message cannot block the partition. Messages without an `eventId` are logged and skipped.
+
+**Scheduled jobs** (`@nestjs/schedule`):
+
+- **Health check** (every 5 min, read-only). Logs `⚠ N outbox event(s) in FAILED state need attention` and `⚠ oldest PENDING event is X min old — is Kafka down?` when the oldest pending event is older than `OUTBOX_STUCK_THRESHOLD_MIN`. It logs nothing when healthy.
+- **Cleanup** (daily, 03:00). Deletes `SENT` outbox rows and `processed_events` older than `OUTBOX_RETENTION_DAYS`, 1000 at a time. It never deletes `PENDING` or `FAILED` rows. `processed_events` retention must be at least the Kafka topic retention, or a replayed message could be processed twice.
+
+### Production considerations
+
+- **Alerting, not logs.** Export `FAILED` count and oldest-`PENDING` age as metrics (Prometheus / CloudWatch) and alert on them.
+- **Dead-letter topic.** Publish poison messages to `<topic>.dlq` instead of counting retries in memory; the counter resets on restart and isn't shared between instances.
+- **Durable Kafka.** Use `replicationFactor: 3`, `min.insync.replicas=2`, and an idempotent producer with `acks=all`.
+- **Strict per-key order across instances.** The ordering filter covers backoff, but two relays can still interleave one user's rows that are due at the same time. Per-key advisory locks, or one relay per partition, would close that gap.
+- **High throughput.** Replace polling with CDC (Debezium reading the Postgres WAL into Kafka) and partition or clean up the outbox table more aggressively.
+
+### Manual test
+
+Follow the logs in one terminal: `docker compose logs -f qashio-api`. Query the database with:
+
+```bash
+alias q='docker compose exec -T postgres psql -U postgres -d qashio_points -c'
+```
+
+1. **Happy path.** Create a transaction (in the app at http://localhost:3000, or Swagger at http://localhost:4000/docs). Within about 1s the log shows `→ transaction.created [partition … @ offset …] eventId=…`, and:
+   ```bash
+   q "SELECT id, status, attempts, sent_at FROM outbox_events ORDER BY created_at DESC LIMIT 1"
+   q "SELECT * FROM processed_events ORDER BY processed_at DESC LIMIT 1"
+   ```
+   The row is `SENT` and its id appears in `processed_events`.
+2. **Kafka down.** Run `docker compose stop kafka`, then create a transaction. The API still returns `201`, and the row stays `PENDING` with `attempts = 0` and `last_error` set (`⚠ Kafka unavailable … deferred` in the log):
+   ```bash
+   q "SELECT status, attempts, last_error, next_attempt_at FROM outbox_events ORDER BY created_at DESC LIMIT 1"
+   ```
+3. **Health check.** Wait 5+ minutes. The next run (every 5 min) logs `⚠ oldest PENDING event is X min old — is Kafka down? (N PENDING)`. To see it sooner, set `OUTBOX_STUCK_THRESHOLD_MIN=1`.
+4. **Recovery.** Run `docker compose start kafka`. Within `OUTBOX_BACKOFF_MAX_MS` (60s) the row becomes `SENT` and the budget consumer processes it.
+5. **Duplicate delivery.** Re-publish the latest event, with the same `eventId`, twice:
+   ```bash
+   LINE=$(docker compose exec -T postgres psql -U postgres -d qashio_points -Atc \
+     "SELECT message_key || '|' || payload::text FROM outbox_events ORDER BY created_at DESC LIMIT 1")
+   printf '%s\n%s\n' "$LINE" "$LINE" | docker compose exec -T kafka \
+     /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 \
+     --topic transaction.created --property parse.key=true --property key.separator='|'
+   ```
+   The log shows `↷ … duplicate eventId=…` (twice, because the original was already processed), and `processed_events` still has one row for that event.
+
+---
+
 ## 🧪 Testing
 
 ```bash
@@ -247,6 +333,8 @@ cd qashio-api && npm test
 | Unit | Auth form validators, route-guard middleware, api client (refresh and retry, shared refresh, sign-out on failure) |
 | UI integration | Login, register and logout flows with a real React Query client: loading states, alerts, validation, cache clearing, navigation. Transaction type: column, signed amounts, filter and `?type=` request |
 
-**Backend:** guards, auth controller (cookies set, refreshed and cleared), auth service, JWT strategy (cookie or Bearer token), Kafka publisher, transactions service.
+**Backend:** guards, auth controller (cookies set, refreshed and cleared), auth service, JWT strategy (cookie or Bearer token), transactions service (row + outbox event are atomic), outbox relay (success, permanent vs transient failures, backoff, per-key ordering, overlapping ticks, batch draining), error classification and backoff math, idempotent budget consumer (duplicates, poison messages), health check and cleanup jobs.
+
+**Outbox integration** (real Postgres, `npm run test:e2e`, file `test/outbox.e2e-spec.ts`): creating a transaction writes one `PENDING` row, two concurrent relays publish each row exactly once (`SKIP LOCKED`), a duplicate delivery is processed once, and cleanup keeps `PENDING`/`FAILED` rows.
 
 

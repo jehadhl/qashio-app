@@ -11,6 +11,7 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '@/app.module';
 import { KAFKA_CLIENT, KAFKA_TOPICS } from '@/core/kafka/kafka.constants';
+import { OutboxRelay } from '@/core/outbox/outbox.relay';
 import { prepareTestDatabase, truncateAll } from './test-db';
 
 interface Session {
@@ -115,7 +116,13 @@ describe('Qashio API (e2e)', () => {
     await app?.close();
   });
 
-  beforeEach(() => kafka.emit.mockClear());
+  // Events reach Kafka through the outbox: run the relay once to publish what's pending
+  const flushOutbox = () => app.get(OutboxRelay).tick();
+
+  beforeEach(async () => {
+    await flushOutbox();
+    kafka.emit.mockClear();
+  });
 
   describe('HTTP basics', () => {
     it('wraps errors in the standard error shape', async () => {
@@ -447,11 +454,14 @@ describe('Qashio API (e2e)', () => {
         });
         expect(res.body.data).not.toHaveProperty('userId');
 
+        await flushOutbox();
         expect(kafka.emit).toHaveBeenCalledWith(
           KAFKA_TOPICS.TRANSACTION_CREATED,
           {
             key: alice.userId,
+            headers: { 'event-id': expect.any(String) },
             value: expect.objectContaining({
+              eventId: expect.any(String),
               transactionId: res.body.data.id,
               userId: alice.userId,
               categoryId: groceries,
@@ -471,6 +481,7 @@ describe('Qashio API (e2e)', () => {
           .expect(404);
 
         expect(res.body.message).toBe('Category not found');
+        await flushOutbox();
         expect(kafka.emit).not.toHaveBeenCalled();
       });
 
@@ -493,6 +504,7 @@ describe('Qashio API (e2e)', () => {
             .send(body);
           expect({ body, status: res.status }).toEqual({ body, status: 400 });
         }
+        await flushOutbox();
         expect(kafka.emit).not.toHaveBeenCalled();
       });
     });
@@ -698,6 +710,7 @@ describe('Qashio API (e2e)', () => {
           narration: 'Changed',
           category: { id: rent, name: 'Rent' },
         });
+        await flushOutbox();
         expect(kafka.emit).toHaveBeenCalledWith(
           KAFKA_TOPICS.TRANSACTION_UPDATED,
           expect.objectContaining({

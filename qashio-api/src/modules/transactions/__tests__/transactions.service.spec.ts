@@ -9,7 +9,9 @@ import {
   TransactionStatus,
   TransactionType,
 } from '@/modules/transactions/enums/transaction.enums';
-import { TransactionEventsPublisher } from '@/modules/transactions/events/transaction-events.publisher';
+import { DataSource, EntityManager } from 'typeorm';
+import { KAFKA_TOPICS } from '@/core/kafka/kafka.constants';
+import { OutboxEventInput } from '@/core/outbox/outbox.service';
 import { TransactionsRepository } from '@/modules/transactions/transactions.repository';
 import { TransactionsService } from '@/modules/transactions/transactions.service';
 
@@ -41,11 +43,39 @@ describe('TransactionsService', () => {
     sumCompletedByCategoryAndType: jest.fn(),
   };
   const categoriesService = { findOneOrFail: jest.fn() };
-  const events = { publishCreated: jest.fn(), publishUpdated: jest.fn() };
+
+  // Fake DB transaction: saves are staged and only "committed" if the callback succeeds
+  let staged: Transaction[] = [];
+  const committed: Transaction[] = [];
+  const manager = {
+    save: jest.fn((t: Transaction) => {
+      staged.push(t);
+      return Promise.resolve(Object.assign(t, { id: t.id ?? 'tx-new' }));
+    }),
+  };
+  const dataSource = {
+    transaction: jest.fn(
+      async (work: (manager: EntityManager) => Promise<unknown>) => {
+        staged = [];
+        const result = await work(manager as unknown as EntityManager);
+        committed.push(...staged);
+        return result;
+      },
+    ),
+  };
+  const outbox = {
+    add: jest.fn<Promise<string>, [EntityManager, OutboxEventInput]>(),
+  };
+  const outboxCalls = () =>
+    outbox.add.mock.calls as [
+      EntityManager,
+      OutboxEventInput & { payload: Record<string, unknown> },
+    ][];
   const service = new TransactionsService(
     repo as unknown as TransactionsRepository,
     categoriesService as unknown as CategoriesService,
-    events as unknown as TransactionEventsPublisher,
+    dataSource as unknown as DataSource,
+    outbox,
   );
 
   const body: CreateTransactionDto = {
@@ -61,6 +91,10 @@ describe('TransactionsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    committed.length = 0;
+    outbox.add.mockImplementation((_manager, input) =>
+      Promise.resolve(input.id ?? 'evt-new'),
+    );
     existing = Object.assign(new Transaction(), {
       id: 'tx-1',
       userId: USER,
@@ -108,13 +142,34 @@ describe('TransactionsService', () => {
       expect(saved).toMatchObject({ id: 'tx-new', category: office });
     });
 
-    it('publishes transaction.created after saving', async () => {
+    it('writes a transaction.created outbox event in the same DB transaction', async () => {
       const saved = await service.create(USER, body);
 
-      expect(events.publishCreated).toHaveBeenCalledWith(saved);
-      expect(repo.save.mock.invocationCallOrder[0]).toBeLessThan(
-        events.publishCreated.mock.invocationCallOrder[0],
+      const [[usedManager, input]] = outboxCalls();
+      expect(usedManager).toBe(manager);
+      expect(input).toMatchObject({
+        aggregateType: 'transaction',
+        aggregateId: 'tx-new',
+        topic: KAFKA_TOPICS.TRANSACTION_CREATED,
+        messageKey: USER,
+      });
+      expect(input.payload).toMatchObject({
+        eventId: input.id, // eventId in the payload is the outbox row id
+        transactionId: 'tx-new',
+        userId: USER,
+        categoryId: 'cat-1',
+        amount: 100,
+      });
+      expect(committed).toEqual([saved]);
+    });
+
+    it('does not save the transaction when the outbox insert fails', async () => {
+      outbox.add.mockRejectedValue(new Error('outbox insert failed'));
+
+      await expect(service.create(USER, body)).rejects.toThrow(
+        'outbox insert failed',
       );
+      expect(committed).toEqual([]);
     });
 
     it("rejects another user's (or a missing) category and saves nothing", async () => {
@@ -122,8 +177,8 @@ describe('TransactionsService', () => {
         service.create(USER, { ...body, categoryId: 'cat-x' }),
       ).rejects.toThrow(NotFoundException);
 
-      expect(repo.save).not.toHaveBeenCalled();
-      expect(events.publishCreated).not.toHaveBeenCalled();
+      expect(manager.save).not.toHaveBeenCalled();
+      expect(outbox.add).not.toHaveBeenCalled();
     });
   });
 
@@ -182,7 +237,7 @@ describe('TransactionsService', () => {
         reference: 'INV-2',
         narration: 'Refund',
       });
-      expect(repo.save).toHaveBeenCalledWith(existing);
+      expect(manager.save).toHaveBeenCalledWith(existing);
     });
 
     it('keeps the loaded category without a lookup when it is unchanged', async () => {
@@ -211,21 +266,38 @@ describe('TransactionsService', () => {
         service.update(USER, 'tx-1', put({ categoryId: 'cat-x' })),
       ).rejects.toThrow(NotFoundException);
 
-      expect(repo.save).not.toHaveBeenCalled();
+      expect(manager.save).not.toHaveBeenCalled();
       expect(existing.amount).toBe(100);
     });
 
-    it('publishes transaction.updated after saving', async () => {
+    it('writes a transaction.updated outbox event in the same DB transaction', async () => {
       const saved = await service.update(USER, 'tx-1', put());
 
-      expect(events.publishUpdated).toHaveBeenCalledWith(saved);
+      const [[usedManager, input]] = outboxCalls();
+      expect(usedManager).toBe(manager);
+      expect(input).toMatchObject({
+        aggregateId: 'tx-1',
+        topic: KAFKA_TOPICS.TRANSACTION_UPDATED,
+        messageKey: USER,
+        payload: { amount: 250.5 },
+      });
+      expect(committed).toEqual([saved]);
+    });
+
+    it('does not save the update when the outbox insert fails', async () => {
+      outbox.add.mockRejectedValue(new Error('outbox insert failed'));
+
+      await expect(service.update(USER, 'tx-1', put())).rejects.toThrow(
+        'outbox insert failed',
+      );
+      expect(committed).toEqual([]);
     });
 
     it('throws NotFound for a missing transaction', async () => {
       await expect(service.update(USER, 'tx-x', put())).rejects.toThrow(
         NotFoundException,
       );
-      expect(events.publishUpdated).not.toHaveBeenCalled();
+      expect(outbox.add).not.toHaveBeenCalled();
     });
   });
 
